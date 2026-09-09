@@ -1,0 +1,28 @@
+# Build output
+/build/
+/out/
+/cmake-build-*/
+
+# Visual Studio / MSVC
+.vs/
+*.user
+*.suo
+*.sln.docstates
+CMakeSettings.json
+CMakeUserPresets.json
+
+# Runtime and user data — MUST NEVER be committed (see spec §611 NO USER DATA IN GIT)
+*.db
+*.db-wal
+*.db-shm
+*.log
+/data/
+/logs/
+/backups/
+
+# Misc
+*.obj
+*.exe
+*.pdb
+*.ilk
+Thumbs.db
