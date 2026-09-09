@@ -7,6 +7,11 @@
 add_executable(ir_tests
     framework/test_main.cpp
     unit/version_test.cpp
+    unit/ids_test.cpp
+    unit/time_test.cpp
+    unit/configuration_test.cpp
+    unit/serialization_test.cpp
+    unit/model_test.cpp
 )
 
 target_include_directories(ir_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

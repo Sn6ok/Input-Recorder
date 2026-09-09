@@ -87,8 +87,10 @@ an async writer, and the UI thread never blocks on I/O.
 
 - [x] **Phase 0** — Project bootstrap: CMake, module skeleton, test harness,
   minimal buildable/launchable executable.
-- [ ] **Phase 1** — Core data model (Event, EventType, Timestamp, Session,
-  Context, ClipboardEntry, TextSnapshot, Configuration) + serialization tests.
+- [x] **Phase 1** — Core data model (Event, EventType/Category/Flags, Timestamp,
+  Session, Context, ClipboardEntry, TextSnapshot, Confidence, Configuration) +
+  compact binary serialization and key/value config round-trip; 29 unit tests,
+  clean at `/W4 /WX`.
 - [ ] **Phase 2** — Event pipeline (thread-safe bounded queue, producer/consumer).
 - [ ] **Phase 3** — Keyboard capture (`WH_KEYBOARD_LL`, minimal callback).
 - [ ] **Phase 4** — Reconstruction engine + golden tests.
