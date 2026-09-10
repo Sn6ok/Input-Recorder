@@ -12,6 +12,7 @@ add_executable(ir_tests
     unit/configuration_test.cpp
     unit/serialization_test.cpp
     unit/model_test.cpp
+    unit/event_queue_test.cpp
 )
 
 target_include_directories(ir_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

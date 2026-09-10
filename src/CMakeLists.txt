@@ -9,6 +9,7 @@ add_library(input_recorder_lib STATIC
     core/time.cpp
     core/configuration.cpp
     core/serialization.cpp
+    core/event_queue.cpp
 )
 
 target_include_directories(input_recorder_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

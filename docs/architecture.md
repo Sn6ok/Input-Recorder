@@ -91,7 +91,11 @@ an async writer, and the UI thread never blocks on I/O.
   Session, Context, ClipboardEntry, TextSnapshot, Confidence, Configuration) +
   compact binary serialization and key/value config round-trip; 29 unit tests,
   clean at `/W4 /WX`.
-- [ ] **Phase 2** — Event pipeline (thread-safe bounded queue, producer/consumer).
+- [x] **Phase 2** — Event pipeline: `EventQueue`, a bounded thread-safe ring
+  buffer. Non-blocking `try_push` (drops + counts on overflow, never blocks the
+  producer), batched `wait_and_drain`/`try_drain` for the consumer, clean
+  shutdown via `close()`. Stats + overflow flag. 7 tests incl. 20k-event SPSC
+  and multi-producer burst.
 - [ ] **Phase 3** — Keyboard capture (`WH_KEYBOARD_LL`, minimal callback).
 - [ ] **Phase 4** — Reconstruction engine + golden tests.
 - [ ] **Phase 5** — Clipboard subsystem.
