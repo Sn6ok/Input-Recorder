@@ -12,6 +12,8 @@ add_library(input_recorder_lib STATIC
     core/event_queue.cpp
     keyboard/keyboard_translator.cpp
     capture/keyboard_hook.cpp
+    utils/unicode.cpp
+    reconstruction/reconstruction_engine.cpp
 )
 
 target_include_directories(input_recorder_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

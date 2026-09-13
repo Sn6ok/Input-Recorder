@@ -102,7 +102,13 @@ an async writer, and the UI thread never blocks on I/O.
   non-blocking callback, bounded install retry/backoff, single-instance guard,
   clean start/stop. Shared `EventIdAllocator`. 8 tests (real keystroke capture
   is exercised in the Phase 12 system-integration run).
-- [ ] **Phase 4** — Reconstruction engine + golden tests.
+- [x] **Phase 4** — Reconstruction engine (OS-free, tested). Code-point text
+  buffer with cursor/selection tracking and a `Confidence` model that lowers
+  (never fabricates) on unknowns. Handles TextInput, editing/navigation
+  KeyDowns (Backspace/Delete/Enter/Tab/arrows/Home/End/word-move), Ctrl
+  shortcuts (A/C/X/Z), Paste, and left-click (caret→unknown). Snapshot/restore
+  for point-in-time recovery. Pure UTF-8↔UTF-32 utils. 26 tests incl. the
+  golden scenarios of §481–§494.
 - [ ] **Phase 5** — Clipboard subsystem.
 - [ ] **Phase 6** — Mouse subsystem.
 - [ ] **Phase 7** — Window/process context.

@@ -15,6 +15,8 @@ add_executable(ir_tests
     unit/event_queue_test.cpp
     capture/keyboard_translator_test.cpp
     capture/keyboard_hook_test.cpp
+    unit/unicode_test.cpp
+    reconstruction/reconstruction_test.cpp
 )
 
 target_include_directories(ir_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
