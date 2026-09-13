@@ -96,7 +96,12 @@ an async writer, and the UI thread never blocks on I/O.
   producer), batched `wait_and_drain`/`try_drain` for the consumer, clean
   shutdown via `close()`. Stats + overflow flag. 7 tests incl. 20k-event SPSC
   and multi-producer burst.
-- [ ] **Phase 3** — Keyboard capture (`WH_KEYBOARD_LL`, minimal callback).
+- [x] **Phase 3** — Keyboard capture. `KeyboardTranslator` (OS-free, tested):
+  KeyDown/KeyUp, modifier state, auto-repeat, injected/extended flags.
+  `KeyboardHook` (`WH_KEYBOARD_LL` on a dedicated message-loop thread): minimal
+  non-blocking callback, bounded install retry/backoff, single-instance guard,
+  clean start/stop. Shared `EventIdAllocator`. 8 tests (real keystroke capture
+  is exercised in the Phase 12 system-integration run).
 - [ ] **Phase 4** — Reconstruction engine + golden tests.
 - [ ] **Phase 5** — Clipboard subsystem.
 - [ ] **Phase 6** — Mouse subsystem.
