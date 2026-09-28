@@ -178,7 +178,19 @@ an async writer, and the UI thread never blocks on I/O.
   size cap that trims oldest events and reclaims pages (incremental auto-vacuum).
   Extended `TextSnapshot` with caret state so snapshot restore is exact. 17 new
   tests (POSIX harness); 133 OS-independent tests total.
-- [ ] **Phase 10** — Main UI (Win32).
+- [x] **Phase 10** — Main UI (Win32). OS-free presentation logic (tested):
+  `AppViewModel` (recording status + reconstructed text/confidence, the
+  ● RECORDING/○ PAUSED indicator, an empty-state placeholder, a confidence note
+  shown only below High, and the verbatim Copy-All payload) and
+  `history_formatting` (single-line, code-point-safe, control-char-sanitised row
+  formatters for events/clipboard/sessions with an ellipsis on overflow).
+  Win32 shells (compiled-by-inspection): `MainWindow` — indicator, read-only
+  multi-line text view, confidence note, Pause/Resume + Copy All (self-copy
+  announced to the clipboard monitor) + History buttons, dark/light palette via
+  DWM + control colours; `HistoryWindow` — a search box with live full-text
+  search over a results list, fed by a data-source callback the app wires to
+  HistoryService. 13 new tests (POSIX harness); 146 OS-independent tests total.
+  (Full window↔pipeline wiring lands with the app coordinator in Phase 13.)
 - [ ] **Phase 11** — Settings & themes.
 - [ ] **Phase 12** — System tray & global hotkey.
 - [ ] **Phase 13** — Recovery/reliability.
