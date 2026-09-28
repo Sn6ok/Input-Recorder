@@ -11,6 +11,7 @@ add_library(input_recorder_lib STATIC
     core/serialization.cpp
     core/event_queue.cpp
     keyboard/keyboard_translator.cpp
+    keyboard/keyboard_text.cpp
     capture/keyboard_hook.cpp
     utils/unicode.cpp
     reconstruction/reconstruction_engine.cpp
@@ -40,6 +41,7 @@ add_library(input_recorder_lib STATIC
     reliability/emergency_buffer.cpp
     reliability/recovery.cpp
     reliability/recording_coordinator.cpp
+    security/sensitive_input.cpp
     app/application.cpp
 )
 

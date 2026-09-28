@@ -69,6 +69,15 @@ void ClipboardMonitor::note_self_copy(const std::string& utf8) {
 }
 
 void ClipboardMonitor::handle_clipboard_update() {
+    // Honor the clipboard-exclusion marker that password managers and other
+    // sensitive sources set to opt out of clipboard history/monitoring
+    // (spec: never capture secrets). If present, do not record this change.
+    static const UINT kExcludeFormat =
+        RegisterClipboardFormatW(L"ExcludeClipboardContentFromMonitorProcessing");
+    if (kExcludeFormat != 0 && IsClipboardFormatAvailable(kExcludeFormat)) {
+        return;
+    }
+
     auto text = read_clipboard_unicode_text(static_cast<HWND>(hwnd_));
     if (!text) {
         return;  // non-text content or clipboard unavailable; nothing to record

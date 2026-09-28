@@ -227,7 +227,20 @@ an async writer, and the UI thread never blocks on I/O.
   the writer + coordinator + capture + window + tray + hotkey and tears them down
   cleanly (finalising the session); `wWinMain` launches it as a single-instance
   GUI app. 12 new tests; 170 OS-independent tests total.
-- [ ] **Phase 14** — Security hardening.
+- [x] **Phase 14** — Security hardening. Added `scripts/security-scan.sh` (CI
+  guard: fails the build if first-party code references any network / input-
+  injection / process-injection / privilege-escalation / external-code-loading
+  API — runs clean today) and `SECURITY.md` documenting the posture. Credential
+  mitigations: standard Win32 password fields (`ES_PASSWORD`) are skipped by the
+  keyboard hook via `security::password_field_focused`, and clipboard changes
+  carrying `ExcludeClipboardContentFromMonitorProcessing` (set by password
+  managers) are ignored. Verified OS-free: diagnostics never reach the searchable
+  index, and full-text search input can never inject query syntax. Also
+  **completed the typed-text capture path** (a gap from Phase 3): the keyboard
+  hook now resolves characters via `ToUnicodeEx` (`KeyboardTextResolver`,
+  honoring layout/Shift/Caps/AltGr/dead keys) and emits TextInput events, so the
+  reconstruction engine actually rebuilds typed text. 2 new tests; 172
+  OS-independent tests total.
 - [ ] **Phase 15** — Performance optimization.
 - [ ] **Phase 16** — Full QA.
 - [ ] **Phase 17** — Release.

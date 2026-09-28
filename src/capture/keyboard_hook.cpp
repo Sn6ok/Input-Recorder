@@ -3,6 +3,9 @@
 #include <Windows.h>
 
 #include <future>
+#include <optional>
+#include <string>
+#include <utility>
 
 #include "capture/raw_input.hpp"
 #include "core/time.hpp"
@@ -50,16 +53,46 @@ KeyboardHook::~KeyboardHook() { stop(); }
 
 void KeyboardHook::on_raw_input(const RawKeyboardInput& raw) {
     // Runs on the capture thread only. Keep it minimal (spec §58, §455).
-    Event e = translator_.translate(raw, Clock::now());
+    const Timestamp ts = Clock::now();
+    Event e = translator_.translate(raw, ts);
     e.id = ids_.next();
     e.session = session_;
-    if (context_source_ != nullptr) {
-        e.context = ContextId{context_source_->load(std::memory_order_relaxed)};
+    const ContextId ctx =
+        context_source_ != nullptr
+            ? ContextId{context_source_->load(std::memory_order_relaxed)}
+            : ContextId{};
+    e.context = ctx;
+
+    // Resolve typed text (updates dead-key/modifier state regardless of whether
+    // we record, so state stays consistent after a sensitive stretch).
+    std::optional<std::string> text = text_resolver_.on_key(
+        static_cast<std::uint16_t>(raw.virtual_key),
+        static_cast<std::uint16_t>(raw.scan_code), raw.key_up);
+
+    // Never record while the sensitive guard is active (e.g. a password field).
+    if (sensitive_guard_ && sensitive_guard_()) {
+        return;
     }
+
     if (queue_.try_push(std::move(e))) {
         captured_.fetch_add(1, std::memory_order_relaxed);
     }
-    // On a full queue the event is dropped and counted by the queue itself
+
+    // Emit the resolved characters as a TextInput event for reconstruction.
+    if (text && !text->empty()) {
+        Event t;
+        t.id = ids_.next();
+        t.session = session_;
+        t.context = ctx;
+        t.time = ts;
+        t.type = EventType::TextInput;
+        t.category = EventCategory::UserInput;
+        t.payload = TextInputData{std::move(*text)};
+        if (queue_.try_push(std::move(t))) {
+            captured_.fetch_add(1, std::memory_order_relaxed);
+        }
+    }
+    // On a full queue events are dropped and counted by the queue itself
     // (overflow flag); we do not block system input here.
 }
 

@@ -13,11 +13,13 @@
 
 #include <atomic>
 #include <cstdint>
+#include <functional>
 #include <thread>
 
 #include "core/event_id_allocator.hpp"
 #include "core/event_queue.hpp"
 #include "core/ids.hpp"
+#include "keyboard/keyboard_text.hpp"
 #include "keyboard/keyboard_translator.hpp"
 
 namespace ir {
@@ -52,6 +54,14 @@ public:
         context_source_ = source;
     }
 
+    // Optional guard consulted per key: when it returns true (e.g. a password
+    // field is focused), the key is not recorded at all — no keystroke and no
+    // resolved text (spec: never capture credentials). Modifier/lock state is
+    // still tracked so recording stays consistent afterwards.
+    void set_sensitive_guard(std::function<bool()> guard) {
+        sensitive_guard_ = std::move(guard);
+    }
+
     // Called from the low-level hook callback (public so the file-scope proc can
     // reach it; not intended for external use).
     void on_raw_input(const RawKeyboardInput& raw);
@@ -66,7 +76,9 @@ private:
     EventQueue& queue_;
     EventIdAllocator& ids_;
     SessionId session_;
-    KeyboardTranslator translator_;  // touched only on the capture thread
+    KeyboardTranslator translator_;     // touched only on the capture thread
+    KeyboardTextResolver text_resolver_;  // touched only on the capture thread
+    std::function<bool()> sensitive_guard_;
 
     std::thread thread_;
     std::atomic<unsigned long> thread_id_{0};

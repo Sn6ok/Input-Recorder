@@ -13,6 +13,7 @@
 #include "core/time.hpp"
 #include "core/version.hpp"
 #include "reliability/recovery.hpp"
+#include "security/sensitive_input.hpp"
 #include "storage/storage_paths.hpp"
 #include "ui/history_formatting.hpp"
 #include "ui/os_theme.hpp"
@@ -103,6 +104,7 @@ bool Application::initialize(void* hinstance, int show_command) {
     // context/clipboard id counters are seeded so ids stay unique across runs.
     keyboard_ = std::make_unique<KeyboardHook>(*queue_, *ids_, session_);
     keyboard_->set_context_source(&current_context_);
+    keyboard_->set_sensitive_guard([] { return password_field_focused(); });
 
     mouse_ = std::make_unique<MouseHook>(*queue_, *ids_, session_,
                                          mouse_settings_of(config));

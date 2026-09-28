@@ -99,6 +99,7 @@ test_srcs=(
   tests/reliability/emergency_buffer_test.cpp
   tests/reliability/recovery_test.cpp
   tests/reliability/recording_coordinator_test.cpp
+  tests/security/security_test.cpp
   tests/ui/app_view_model_test.cpp
   tests/ui/history_formatting_test.cpp
   tests/ui/theme_test.cpp
