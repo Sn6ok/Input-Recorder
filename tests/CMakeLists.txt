@@ -23,6 +23,9 @@ add_executable(ir_tests
     capture/mouse_hook_test.cpp
     context/context_tracker_test.cpp
     context/window_context_monitor_test.cpp
+    storage/sqlite_database_test.cpp
+    storage/event_store_test.cpp
+    storage/storage_worker_test.cpp
 )
 
 target_include_directories(ir_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

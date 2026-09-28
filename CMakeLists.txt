@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.20)
 project(InputRecorder
     VERSION 0.1.0
     DESCRIPTION "Personal local input recovery utility for Windows 11"
-    LANGUAGES CXX)
+    LANGUAGES CXX C)  # C is required only to compile the vendored SQLite amalgamation
 
 # --------------------------------------------------------------------------
 # Global settings
@@ -42,6 +42,7 @@ include(ProjectSettings)
 
 enable_testing()
 
+add_subdirectory(third_party/sqlite)
 add_subdirectory(src)
 add_subdirectory(tests)
 

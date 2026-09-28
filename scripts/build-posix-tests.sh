@@ -107,8 +107,14 @@ if [[ -f "$sqlite_c" ]]; then
   extra_incs+=("-Ithird_party/sqlite")
   sqlite_obj="$outdir/sqlite3.o"
   cc="${CC:-clang}"
-  echo ">> compiling SQLite amalgamation ($cc)"
-  "$cc" -std=c11 -O2 "${sqlite_defs[@]}" -c "$sqlite_c" -o "$sqlite_obj"
+  # The amalgamation is large and never changes between runs; only rebuild the
+  # object when it is missing or the source is newer (big iteration speed-up).
+  if [[ ! -f "$sqlite_obj" || "$sqlite_c" -nt "$sqlite_obj" ]]; then
+    echo ">> compiling SQLite amalgamation ($cc)"
+    "$cc" -std=c11 -O2 "${sqlite_defs[@]}" -c "$sqlite_c" -o "$sqlite_obj"
+  else
+    echo ">> using cached SQLite object ($sqlite_obj)"
+  fi
 fi
 
 # Only compile sources that exist yet (the file lists span all phases).

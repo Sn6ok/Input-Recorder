@@ -151,7 +151,22 @@ an async writer, and the UI thread never blocks on I/O.
   other capture sources to stamp, pushes ContextChanged events and hands Context
   records to a storage sink; single-instance guard + bounded retry. 9 tracker
   tests (POSIX harness) + 2 Win32 lifecycle tests (Windows only).
-- [ ] **Phase 8** — Storage (SQLite).
+- [x] **Phase 8** — Storage (SQLite). Vendored the SQLite **3.53.4**
+  amalgamation under `third_party/sqlite/` (built as an isolated `sqlite3`
+  static lib so its warnings never hit `/W4 /WX`; FTS5 enabled, extension
+  loading omitted). `SqliteDatabase`/`SqliteStatement`: RAII wrapper over the C
+  API with prepared statements, blob binding and a `transaction()` helper
+  (BEGIN IMMEDIATE → COMMIT/ROLLBACK, rolls back + rethrows on exception).
+  `EventStore`: schema (sessions/contexts/clipboard_entries/events/snapshots/
+  settings/meta) with the hybrid typed-columns + serialized-payload-blob event
+  layout, WAL + `synchronous=NORMAL` + busy-timeout pragmas, typed
+  insert/upsert/read for every record, settings round-trip, and `max_*_id()`
+  queries for allocator seeding across runs. `StorageWorker`: async writer on a
+  dedicated thread that batches all staged records into one transaction
+  (I/O off the capture path), with a deterministic `flush()`; validated race-
+  free under ThreadSanitizer. `storage_paths` (Win32) resolves
+  `%LOCALAPPDATA%\InputRecorder\`. 22 storage tests run for real on the POSIX
+  harness (SQLite compiles there); 116 OS-independent tests total.
 - [ ] **Phase 9** — History (search, snapshots, retention).
 - [ ] **Phase 10** — Main UI (Win32).
 - [ ] **Phase 11** — Settings & themes.

@@ -20,12 +20,17 @@ add_library(input_recorder_lib STATIC
     capture/mouse_hook.cpp
     context/context_tracker.cpp
     context/window_context_monitor.cpp
+    storage/sqlite_database.cpp
+    storage/event_store.cpp
+    storage/storage_worker.cpp
+    storage/storage_paths.cpp
 )
 
 target_include_directories(input_recorder_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_features(input_recorder_lib PUBLIC cxx_std_20)
-# Windows user-level input APIs (SetWindowsHookEx, message loop, etc.).
-target_link_libraries(input_recorder_lib PUBLIC user32)
+# Windows user-level input APIs (SetWindowsHookEx, message loop, etc.),
+# Known Folder path resolution (shell32/ole32), and the vendored SQLite lib.
+target_link_libraries(input_recorder_lib PUBLIC user32 shell32 ole32 sqlite3)
 ir_set_target_warnings(input_recorder_lib)
 ir_set_windows_defs(input_recorder_lib)
 
