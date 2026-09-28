@@ -1,6 +1,7 @@
 #include "app/application.hpp"
 
 #include <Windows.h>
+#include <commctrl.h>
 
 #include <string>
 #include <vector>
@@ -70,6 +71,12 @@ bool Application::initialize(void* hinstance, int show_command) {
     hinstance_ = hinstance;
     ui_thread_id_ = GetCurrentThreadId();
     g_app = this;
+
+    // Enable Common Controls v6 (visual styles for the list box, cue banner…).
+    INITCOMMONCONTROLSEX icc{};
+    icc.dwSize = sizeof(icc);
+    icc.dwICC = ICC_STANDARD_CLASSES | ICC_WIN95_CLASSES;
+    InitCommonControlsEx(&icc);
 
     if (!open_storage()) return false;
 

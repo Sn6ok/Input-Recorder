@@ -51,7 +51,7 @@ target_compile_features(input_recorder_lib PUBLIC cxx_std_20)
 # Known Folder path resolution (shell32/ole32), GDI + DWM for the themed window,
 # and the vendored SQLite lib.
 target_link_libraries(input_recorder_lib PUBLIC
-    user32 shell32 ole32 gdi32 dwmapi advapi32 sqlite3)
+    user32 shell32 ole32 gdi32 dwmapi advapi32 comctl32 sqlite3)
 ir_set_target_warnings(input_recorder_lib)
 ir_set_windows_defs(input_recorder_lib)
 
@@ -64,3 +64,12 @@ set_target_properties(InputRecorder PROPERTIES WIN32_EXECUTABLE TRUE)
 target_link_libraries(InputRecorder PRIVATE input_recorder_lib)
 ir_set_target_warnings(InputRecorder)
 ir_set_windows_defs(InputRecorder)
+
+# Version resource + application manifest (asInvoker, DPI, UTF-8, ComCtl v6).
+if(MSVC)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/version.rc.in
+                   ${CMAKE_CURRENT_BINARY_DIR}/version.rc @ONLY)
+    target_sources(InputRecorder PRIVATE
+        ${CMAKE_CURRENT_BINARY_DIR}/version.rc
+        ${CMAKE_CURRENT_SOURCE_DIR}/app.manifest)
+endif()

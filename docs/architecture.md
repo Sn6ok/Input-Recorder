@@ -256,8 +256,16 @@ an async writer, and the UI thread never blocks on I/O.
   retention) and `docs/qa.md` (the coverage matrix + a Windows manual-test
   checklist for the Win32 layer that CI can't run). The full portable suite
   (**174 tests**) runs **clean under AddressSanitizer + UndefinedBehavior
-  Sanitizer**, and the concurrent components run clean under ThreadSanitizer.
+  Sanitizer and under ThreadSanitizer** (zero data races).
   Added `EXTRA_CXXFLAGS`/`EXTRA_CFLAGS` hooks to the harness for sanitizer runs,
   and fixed two g++-only `-Wformat-truncation` false positives by enlarging fixed
   format buffers (defensive; clang/MSVC were already clean).
-- [ ] **Phase 17** — Release.
+- [x] **Phase 17** — Release. The executable is a `/SUBSYSTEM:WINDOWS` GUI app
+  with an embedded **application manifest** (`src/app.manifest`: `asInvoker` — no
+  elevation, Per-Monitor-V2 DPI awareness, UTF-8 active code page, Windows 10/11
+  compatibility, Common Controls v6) and a **version resource**
+  (`src/version.rc.in`, configured from the CMake project version). The app
+  enables visual styles via `InitCommonControlsEx`. Release is the primary
+  configuration (`./scripts/build.ps1 -Test -WarningsAsErrors`). README updated
+  to the finished feature set; `SECURITY.md`, `docs/qa.md` and
+  `docs/performance.md` round out the release documentation.

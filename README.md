@@ -16,9 +16,23 @@ local history, and copy it back.
 
 ## Status
 
-Under active, phased development. Current milestone: **Phase 0 — project
-bootstrap** (build system, module skeleton, test harness). See
-[`docs/architecture.md`](docs/architecture.md) for the roadmap and design.
+Feature-complete (Phases 0–17). Keyboard/mouse/clipboard capture, window-context
+tracking, text reconstruction with a confidence model, local SQLite storage with
+an async writer and WAL, history with full-text search, snapshots and retention,
+a Win32 UI (recording indicator, read-only text, Copy All, History), settings and
+dark/light themes, a system tray with a global toggle hotkey, crash recovery and
+an emergency buffer, and security hardening. See
+[`docs/architecture.md`](docs/architecture.md) for the design and the per-phase
+notes, [`docs/qa.md`](docs/qa.md) for the QA matrix,
+[`docs/performance.md`](docs/performance.md) for measured performance, and
+[`SECURITY.md`](SECURITY.md) for the security posture.
+
+**Testing note.** The OS-independent core (the bulk of the logic, including the
+whole SQLite storage/history stack) is covered by 174 unit + integration tests
+that run on any POSIX host via `scripts/build-posix-tests.sh` and are clean under
+AddressSanitizer/UBSan and ThreadSanitizer. The Win32 layer (hooks, monitors,
+tray, windows, app assembly) is built and gated by the authoritative MSVC
+`/W4 /WX` build on Windows; see the manual checklist in `docs/qa.md`.
 
 ## Building
 
@@ -52,13 +66,19 @@ The executable is produced at `build/bin/Release/InputRecorder.exe`.
 ## Where data is stored
 
 All recorded data stays on the local machine under your user profile
-(`%LOCALAPPDATA%\InputRecorder\`). Nothing is ever transmitted off the device.
-(Storage is implemented in Phase 8.)
+(`%LOCALAPPDATA%\InputRecorder\`), in a local SQLite database. Nothing is ever
+transmitted off the device.
 
 ## Hotkeys, recording and settings
 
-Global hotkey, recording controls, retention and appearance settings are
-implemented in later phases and documented here as they land.
+- **Global toggle hotkey:** `Ctrl+Shift+R` pauses/resumes recording (configurable).
+- **Recording controls:** pause/resume from the window, the tray menu or the
+  hotkey; the state is always visible (● RECORDING / ○ PAUSED).
+- **Settings:** recording toggles (keyboard, mouse clicks/wheel/movement, active
+  window, clipboard), theme (System/Light/Dark), retention (days + storage cap),
+  startup and tray behavior.
+- **History:** browse and full-text-search everything recorded; Copy All copies
+  the current reconstructed text.
 
 ## License
 

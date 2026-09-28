@@ -45,10 +45,10 @@ scripts/build-posix-tests.sh --suite=integration
   **entire** portable suite (174 tests) runs **clean** — no ASan reports, no UB —
   under:
   `OUT_DIR=/tmp/asan CXX=g++ CC=gcc EXTRA_CXXFLAGS="-fsanitize=address,undefined -fno-sanitize-recover=undefined" scripts/build-posix-tests.sh`
-- **ThreadSanitizer** (data races): the concurrent components — the async
-  `StorageWorker` and the `RecordingCoordinator` consumer thread — run **clean**
-  under TSan (g++ `-fsanitize=thread`). The whole suite can also be built under
-  TSan via `EXTRA_CXXFLAGS="-fsanitize=thread" EXTRA_CFLAGS="-fsanitize=thread"`.
+- **ThreadSanitizer** (data races): the **entire** suite (174 tests, including
+  the concurrent `StorageWorker` and `RecordingCoordinator` paths) runs **clean**
+  under TSan — zero data-race reports — via
+  `OUT_DIR=/tmp/tsan CXX=g++ CC=gcc EXTRA_CXXFLAGS="-fsanitize=thread" EXTRA_CFLAGS="-fsanitize=thread" scripts/build-posix-tests.sh`.
 
 These are real runs on the build host, not estimates.
 
