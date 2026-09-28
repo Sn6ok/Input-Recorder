@@ -231,7 +231,9 @@ Configuration SettingsWindow::read_controls() {
     GetWindowTextW(GetDlgItem(hwnd, IDC_RETENTION), buf, 16);
     int days = c.retention_days;
     std::wstring w(buf);
-    std::string narrow(w.begin(), w.end());  // digits only (ES_NUMBER)
+    std::string narrow;  // digits only (ES_NUMBER)
+    narrow.reserve(w.size());
+    for (wchar_t ch : w) narrow.push_back(static_cast<char>(ch));
     std::from_chars(narrow.data(), narrow.data() + narrow.size(), days);
     c.retention_days = days;
 

@@ -51,6 +51,10 @@ void CALLBACK refresh_timer_proc(HWND, UINT, UINT_PTR, DWORD) {
 
 }  // namespace
 
+// Out-of-line so the members' unique_ptr<incomplete type> are instantiated here,
+// where the capture-source types are complete.
+Application::Application() = default;
+
 Application::~Application() { shutdown(); }
 
 bool Application::open_storage() {

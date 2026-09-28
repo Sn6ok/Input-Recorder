@@ -1,6 +1,7 @@
 #include "ui/history_window.hpp"
 
 #include <Windows.h>
+#include <commctrl.h>  // EM_SETCUEBANNER
 
 #include "utils/unicode.hpp"
 
