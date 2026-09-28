@@ -139,6 +139,7 @@ bool Application::initialize(void* hinstance, int show_command) {
     MainWindow::Callbacks wc;
     wc.on_recording_changed = [this](bool) { toggle_recording(); };
     wc.on_open_history = [this] { open_history(); };
+    wc.on_open_settings = [this] { open_settings(); };
     wc.on_copy_all = [this](const std::string& text) {
         if (clipboard_) clipboard_->note_self_copy(text);
     };

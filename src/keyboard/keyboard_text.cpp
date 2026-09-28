@@ -57,7 +57,17 @@ std::optional<std::string> KeyboardTextResolver::on_key(std::uint16_t vk,
     // characters on some layouts, so allow that combination.
     if ((ctrl && !alt) || (alt && !ctrl)) return std::nullopt;
 
+    // Resolve characters with the FOREGROUND window's keyboard layout, not the
+    // capture thread's own layout. The hook runs on the app's capture thread
+    // (US English by default); using its layout mis-resolves input typed in
+    // another layout (e.g. Ukrainian) into the Latin letters of the physical
+    // keys instead of the real characters. GetKeyboardLayout(threadId) of the
+    // foreground thread gives the layout the user is actually typing with.
     HKL layout = GetKeyboardLayout(0);
+    if (HWND fg = GetForegroundWindow()) {
+        const DWORD tid = GetWindowThreadProcessId(fg, nullptr);
+        if (tid != 0) layout = GetKeyboardLayout(tid);
+    }
     wchar_t buffer[8] = {};
     const int rc = ToUnicodeEx(vk, scan, key_state_, buffer,
                                static_cast<int>(std::size(buffer)), 0, layout);

@@ -23,6 +23,7 @@ public:
     struct Callbacks {
         std::function<void(bool recording)> on_recording_changed;  // user toggle
         std::function<void()> on_open_history;
+        std::function<void()> on_open_settings;
         std::function<void(const std::string& copied_utf8)> on_copy_all;  // self-copy
     };
 
@@ -63,6 +64,7 @@ private:
     void refresh_text();
     void do_copy_all();
     void apply_theme();
+    void draw_button(void* draw_item_struct);  // WM_DRAWITEM owner-draw
 
     void* hwnd_ = nullptr;         // HWND
     void* status_label_ = nullptr; // HWND (static)
@@ -71,8 +73,12 @@ private:
     void* toggle_btn_ = nullptr;   // HWND
     void* copy_btn_ = nullptr;     // HWND
     void* history_btn_ = nullptr;  // HWND
-    void* bg_brush_ = nullptr;     // HBRUSH for the themed background
-    bool dark_ = false;
+    void* settings_btn_ = nullptr; // HWND
+    void* bg_brush_ = nullptr;     // HBRUSH for the window background
+    void* panel_brush_ = nullptr;  // HBRUSH for the text panel
+    void* body_font_ = nullptr;    // HFONT (Segoe UI, body)
+    void* title_font_ = nullptr;   // HFONT (Segoe UI, status/header)
+    bool dark_ = true;
     bool close_to_tray_ = false;
 
     AppViewModel model_;
