@@ -109,4 +109,54 @@ std::size_t utf8_codepoint_count(std::string_view utf8) {
     return count;
 }
 
+std::string utf16_to_utf8(std::u16string_view utf16) {
+    std::string out;
+    out.reserve(utf16.size() * 2);
+    const std::size_t n = utf16.size();
+    for (std::size_t i = 0; i < n; ++i) {
+        char32_t cp = utf16[i];
+        if (cp >= 0xD800 && cp <= 0xDBFF && i + 1 < n) {
+            const char32_t lo = utf16[i + 1];
+            if (lo >= 0xDC00 && lo <= 0xDFFF) {
+                cp = 0x10000 + ((cp - 0xD800) << 10) + (lo - 0xDC00);
+                ++i;
+            } else {
+                cp = kReplacement;  // unpaired high surrogate
+            }
+        } else if (cp >= 0xD800 && cp <= 0xDFFF) {
+            cp = kReplacement;  // lone surrogate
+        }
+        append_utf8(out, cp);
+    }
+    return out;
+}
+
+std::u16string utf8_to_utf16(std::string_view utf8) {
+    const std::u32string cps = utf8_to_utf32(utf8);
+    std::u16string out;
+    out.reserve(cps.size());
+    for (char32_t cp : cps) {
+        if (cp <= 0xFFFF) {
+            out.push_back(static_cast<char16_t>(cp));
+        } else {
+            cp -= 0x10000;
+            out.push_back(static_cast<char16_t>(0xD800 + (cp >> 10)));
+            out.push_back(static_cast<char16_t>(0xDC00 + (cp & 0x3FF)));
+        }
+    }
+    return out;
+}
+
+std::string utf8_truncate(std::string_view utf8, std::size_t max_bytes) {
+    if (utf8.size() <= max_bytes) {
+        return std::string(utf8);
+    }
+    std::size_t cut = max_bytes;
+    // Walk back off any continuation byte so we never split a code point.
+    while (cut > 0 && (static_cast<unsigned char>(utf8[cut]) & 0xC0) == 0x80) {
+        --cut;
+    }
+    return std::string(utf8.substr(0, cut));
+}
+
 }  // namespace ir

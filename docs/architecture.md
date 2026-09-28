@@ -109,7 +109,12 @@ an async writer, and the UI thread never blocks on I/O.
   shortcuts (A/C/X/Z), Paste, and left-click (caret→unknown). Snapshot/restore
   for point-in-time recovery. Pure UTF-8↔UTF-32 utils. 26 tests incl. the
   golden scenarios of §481–§494.
-- [ ] **Phase 5** — Clipboard subsystem.
+- [x] **Phase 5** — Clipboard subsystem. `ClipboardProcessor` (OS-free, tested):
+  consecutive-duplicate suppression, size cap with code-point-safe truncation,
+  self-copy suppression (internal Copy All), and Paste-event construction with
+  resolved text. `ClipboardMonitor` (Win32): message-only window +
+  `AddClipboardFormatListener` (event-driven), bounded-retry `CF_UNICODETEXT`
+  read, thread-safe. UTF-16↔UTF-8 utils. 7 tests.
 - [ ] **Phase 6** — Mouse subsystem.
 - [ ] **Phase 7** — Window/process context.
 - [ ] **Phase 8** — Storage (SQLite).

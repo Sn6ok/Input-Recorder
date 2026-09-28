@@ -14,6 +14,8 @@ add_library(input_recorder_lib STATIC
     capture/keyboard_hook.cpp
     utils/unicode.cpp
     reconstruction/reconstruction_engine.cpp
+    clipboard/clipboard_processor.cpp
+    clipboard/clipboard_monitor.cpp
 )
 
 target_include_directories(input_recorder_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

@@ -17,6 +17,8 @@ add_executable(ir_tests
     capture/keyboard_hook_test.cpp
     unit/unicode_test.cpp
     reconstruction/reconstruction_test.cpp
+    clipboard/clipboard_processor_test.cpp
+    clipboard/clipboard_monitor_test.cpp
 )
 
 target_include_directories(ir_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
