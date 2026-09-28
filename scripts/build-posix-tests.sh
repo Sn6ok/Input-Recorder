@@ -40,7 +40,9 @@ bin="$outdir/ir_tests_posix"
 warnflags=(-Wall -Wextra -Wpedantic -Werror
            # clang/gcc-only diagnostics with no MSVC /W4 equivalent:
            -Wno-unused-const-variable)
-stdflags=(-std=c++20 -O2 -pthread -Isrc -Itests)
+# Optional extra compile/link flags (e.g. sanitizers): EXTRA_CXXFLAGS="-fsanitize=address,undefined"
+read -ra _extra_cxxflags <<< "${EXTRA_CXXFLAGS:-}"
+stdflags=(-std=c++20 -O2 -pthread -Isrc -Itests "${_extra_cxxflags[@]}")
 
 # OS-independent library translation units (everything in input_recorder_lib
 # that does NOT include <Windows.h>). Keep in sync with src/CMakeLists.txt.
@@ -100,6 +102,7 @@ test_srcs=(
   tests/reliability/recovery_test.cpp
   tests/reliability/recording_coordinator_test.cpp
   tests/security/security_test.cpp
+  tests/integration/pipeline_test.cpp
   tests/ui/app_view_model_test.cpp
   tests/ui/history_formatting_test.cpp
   tests/ui/theme_test.cpp
@@ -123,9 +126,10 @@ if [[ -f "$sqlite_c" ]]; then
   cc="${CC:-clang}"
   # The amalgamation is large and never changes between runs; only rebuild the
   # object when it is missing or the source is newer (big iteration speed-up).
-  if [[ ! -f "$sqlite_obj" || "$sqlite_c" -nt "$sqlite_obj" ]]; then
+  read -ra _extra_cflags <<< "${EXTRA_CFLAGS:-}"
+  if [[ ! -f "$sqlite_obj" || "$sqlite_c" -nt "$sqlite_obj" || -n "${EXTRA_CFLAGS:-}" ]]; then
     echo ">> compiling SQLite amalgamation ($cc)"
-    "$cc" -std=c11 -O2 "${sqlite_defs[@]}" -c "$sqlite_c" -o "$sqlite_obj"
+    "$cc" -std=c11 -O2 "${sqlite_defs[@]}" "${_extra_cflags[@]}" -c "$sqlite_c" -o "$sqlite_obj"
   else
     echo ">> using cached SQLite object ($sqlite_obj)"
   fi

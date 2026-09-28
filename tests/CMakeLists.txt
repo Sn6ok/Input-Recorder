@@ -38,6 +38,7 @@ add_executable(ir_tests
     reliability/recovery_test.cpp
     reliability/recording_coordinator_test.cpp
     security/security_test.cpp
+    integration/pipeline_test.cpp
 )
 
 target_include_directories(ir_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

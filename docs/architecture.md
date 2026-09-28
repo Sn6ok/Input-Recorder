@@ -251,5 +251,13 @@ an async writer, and the UI thread never blocks on I/O.
   typing CPU is negligible and memory is bounded. `docs/performance.md` records
   the numbers and honestly marks Windows end-to-end idle-CPU/working-set as
   pending on-Windows measurement (can't run here). No hot-path change was needed.
-- [ ] **Phase 16** — Full QA.
+- [x] **Phase 16** — Full QA. Added an end-to-end `integration` suite (type +
+  edit + paste reconstruct through queue→coordinator→storage→history, plus
+  retention) and `docs/qa.md` (the coverage matrix + a Windows manual-test
+  checklist for the Win32 layer that CI can't run). The full portable suite
+  (**174 tests**) runs **clean under AddressSanitizer + UndefinedBehavior
+  Sanitizer**, and the concurrent components run clean under ThreadSanitizer.
+  Added `EXTRA_CXXFLAGS`/`EXTRA_CFLAGS` hooks to the harness for sanitizer runs,
+  and fixed two g++-only `-Wformat-truncation` false positives by enlarging fixed
+  format buffers (defensive; clang/MSVC were already clean).
 - [ ] **Phase 17** — Release.

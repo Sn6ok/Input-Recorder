@@ -31,7 +31,9 @@ std::string format_utc(std::int64_t wall_ms) {
     gmtime_r(&secs, &tm);
 #endif
 
-    char buf[32];
+    // 24 bytes suffice for "YYYY-MM-DD HH:MM:SS.mmm"; sized generously so a
+    // worst-case (out-of-range tm) formatting can never truncate.
+    char buf[96];
     std::snprintf(buf, sizeof(buf), "%04d-%02d-%02d %02d:%02d:%02d.%03d",
                   tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour,
                   tm.tm_min, tm.tm_sec, millis);

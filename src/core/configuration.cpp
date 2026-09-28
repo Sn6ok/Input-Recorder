@@ -115,7 +115,7 @@ std::string vk_to_key_name(std::uint16_t vk) {
     if (vk >= 0x70 && vk <= 0x87) {
         return "F" + std::to_string(vk - 0x70 + 1);
     }
-    char buf[8];
+    char buf[16];
     std::snprintf(buf, sizeof(buf), "VK_%02X", vk);
     return std::string(buf);
 }
