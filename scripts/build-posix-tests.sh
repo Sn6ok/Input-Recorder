@@ -66,6 +66,7 @@ lib_srcs=(
   src/reliability/emergency_buffer.cpp
   src/ui/app_view_model.cpp
   src/ui/history_formatting.cpp
+  src/ui/theme.cpp
 )
 
 # OS-independent test translation units. Excludes the Win32 lifecycle tests
@@ -96,6 +97,7 @@ test_srcs=(
   tests/reliability/emergency_buffer_test.cpp
   tests/ui/app_view_model_test.cpp
   tests/ui/history_formatting_test.cpp
+  tests/ui/theme_test.cpp
 )
 
 # Portable SQLite amalgamation, compiled as C when vendored (added in Phase 8).

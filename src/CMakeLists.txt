@@ -28,8 +28,12 @@ add_library(input_recorder_lib STATIC
     history/snapshot_policy.cpp
     ui/app_view_model.cpp
     ui/history_formatting.cpp
+    ui/theme.cpp
+    ui/os_theme.cpp
     ui/main_window.cpp
     ui/history_window.cpp
+    ui/settings_window.cpp
+    settings/settings_service.cpp
 )
 
 target_include_directories(input_recorder_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
@@ -38,7 +42,7 @@ target_compile_features(input_recorder_lib PUBLIC cxx_std_20)
 # Known Folder path resolution (shell32/ole32), GDI + DWM for the themed window,
 # and the vendored SQLite lib.
 target_link_libraries(input_recorder_lib PUBLIC
-    user32 shell32 ole32 gdi32 dwmapi sqlite3)
+    user32 shell32 ole32 gdi32 dwmapi advapi32 sqlite3)
 ir_set_target_warnings(input_recorder_lib)
 ir_set_windows_defs(input_recorder_lib)
 

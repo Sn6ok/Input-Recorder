@@ -191,7 +191,17 @@ an async writer, and the UI thread never blocks on I/O.
   search over a results list, fed by a data-source callback the app wires to
   HistoryService. 13 new tests (POSIX harness); 146 OS-independent tests total.
   (Full window↔pipeline wiring lands with the app coordinator in Phase 13.)
-- [ ] **Phase 11** — Settings & themes.
+- [x] **Phase 11** — Settings & themes. `SettingsService` (OS-free, tested):
+  the single source of truth for `Configuration` — loads it from the storage
+  settings table (validated; missing keys keep defaults), persists changes,
+  returns a thread-safe snapshot, and notifies listeners so capture sources, UI
+  and theme react to edits live. Theme model (OS-free, tested): `effective_dark`
+  resolves System/Light/Dark against the OS setting, `theme_colors` gives the
+  light/dark palette. Win32 (compiled-by-inspection): `os_theme`
+  (`system_prefers_dark` via the registry) and `SettingsWindow` (recording/
+  clipboard/window/startup toggles, theme combo, retention days; Save routes a
+  validated Configuration back to the service). 7 new tests; 153 OS-independent
+  tests total.
 - [ ] **Phase 12** — System tray & global hotkey.
 - [ ] **Phase 13** — Recovery/reliability.
 - [ ] **Phase 14** — Security hardening.
