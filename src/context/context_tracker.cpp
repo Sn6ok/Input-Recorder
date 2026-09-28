@@ -88,7 +88,7 @@ void ContextTracker::reset() {
     by_id_.clear();
     by_key_.clear();
     current_ = ContextId{};
-    next_id_ = 1;
+    next_id_ = first_id_;
 }
 
 }  // namespace ir

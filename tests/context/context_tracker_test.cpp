@@ -106,6 +106,14 @@ TEST_CASE("context.tracker", "find returns stored records; unknown ids are null"
     CHECK(t.find(ir::ContextId{999}) == nullptr);
 }
 
+TEST_CASE("context.tracker", "first_id seeds the id counter for cross-run uniqueness") {
+    ir::ContextTracker t{ir::SessionId{1}, /*first_id=*/100};
+    auto a = t.observe(obs("code.exe", "main.cpp", 1, 0x1, 1));
+    CHECK_EQ(a.context.id.value, 100u);
+    auto b = t.observe(obs("chrome.exe", "Docs", 2, 0x2, 2));
+    CHECK_EQ(b.context.id.value, 101u);
+}
+
 TEST_CASE("context.tracker", "reset clears the cache") {
     ir::ContextTracker t{ir::SessionId{1}};
     t.observe(obs("code.exe", "main.cpp", 100, 0xA, 1000));

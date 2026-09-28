@@ -50,6 +50,12 @@ public:
     // Thread-safe: update the recording toggles (e.g. when settings change).
     void set_settings(const MouseSettings& settings);
 
+    // Optional shared source of the active ContextId (see KeyboardHook). The
+    // pointed-to atomic must outlive this hook. nullptr leaves context at 0.
+    void set_context_source(const std::atomic<std::uint64_t>* source) {
+        context_source_ = source;
+    }
+
     // Called from the low-level hook callback (public so the file-scope proc can
     // reach it; not intended for external use).
     void on_raw_input(const RawMouseInput& raw);
@@ -73,6 +79,7 @@ private:
     std::atomic<bool> installed_{false};
     std::atomic<bool> stop_requested_{false};
     std::atomic<std::uint64_t> captured_{0};
+    const std::atomic<std::uint64_t>* context_source_ = nullptr;
     void* hook_handle_ = nullptr;  // HHOOK, owned by the capture thread
     void* first_result_ = nullptr; // std::promise<bool>* live only during start()
     bool started_ = false;

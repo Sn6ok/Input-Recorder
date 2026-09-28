@@ -112,7 +112,12 @@ long long MainWindow::handle_message(void* hwnd_v, unsigned msg,
             return reinterpret_cast<long long>(bg_brush_);
         }
         case WM_CLOSE:
-            DestroyWindow(hwnd);
+            // Close-to-tray keeps recording; otherwise closing quits the app.
+            if (close_to_tray_) {
+                ShowWindow(hwnd, SW_HIDE);
+            } else {
+                PostQuitMessage(0);
+            }
             return 0;
         case WM_DESTROY:
             PostQuitMessage(0);

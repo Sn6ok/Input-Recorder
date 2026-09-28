@@ -77,12 +77,13 @@ void CALLBACK WinEventProc(HWINEVENTHOOK, DWORD event, HWND hwnd, LONG idObject,
 WindowContextMonitor::WindowContextMonitor(EventQueue& queue,
                                            EventIdAllocator& ids,
                                            SessionId session,
-                                           ContextSink on_context)
+                                           ContextSink on_context,
+                                           std::uint64_t first_context_id)
     : queue_(queue),
       ids_(ids),
       session_(session),
       on_context_(std::move(on_context)),
-      tracker_(session) {}
+      tracker_(session, first_context_id) {}
 
 WindowContextMonitor::~WindowContextMonitor() { stop(); }
 

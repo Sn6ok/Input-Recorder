@@ -37,6 +37,10 @@ add_library(input_recorder_lib STATIC
     settings/settings_service.cpp
     system/hotkey.cpp
     system/global_hotkey.cpp
+    reliability/emergency_buffer.cpp
+    reliability/recovery.cpp
+    reliability/recording_coordinator.cpp
+    app/application.cpp
 )
 
 target_include_directories(input_recorder_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
@@ -50,10 +54,11 @@ ir_set_target_warnings(input_recorder_lib)
 ir_set_windows_defs(input_recorder_lib)
 
 # --------------------------------------------------------------------------
-# InputRecorder : the application executable.
-# Console subsystem during bootstrap; switches to a Win32 GUI in Phase 10.
+# InputRecorder : the application executable. A Win32 GUI app (no console):
+# WIN32_EXECUTABLE selects /SUBSYSTEM:WINDOWS and the wWinMain entry point.
 # --------------------------------------------------------------------------
 add_executable(InputRecorder main.cpp)
+set_target_properties(InputRecorder PROPERTIES WIN32_EXECUTABLE TRUE)
 target_link_libraries(InputRecorder PRIVATE input_recorder_lib)
 ir_set_target_warnings(InputRecorder)
 ir_set_windows_defs(InputRecorder)

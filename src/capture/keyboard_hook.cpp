@@ -53,6 +53,9 @@ void KeyboardHook::on_raw_input(const RawKeyboardInput& raw) {
     Event e = translator_.translate(raw, Clock::now());
     e.id = ids_.next();
     e.session = session_;
+    if (context_source_ != nullptr) {
+        e.context = ContextId{context_source_->load(std::memory_order_relaxed)};
+    }
     if (queue_.try_push(std::move(e))) {
         captured_.fetch_add(1, std::memory_order_relaxed);
     }

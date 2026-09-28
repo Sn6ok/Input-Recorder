@@ -64,6 +64,8 @@ lib_srcs=(
   src/settings/settings_service.cpp
   src/system/hotkey.cpp
   src/reliability/emergency_buffer.cpp
+  src/reliability/recovery.cpp
+  src/reliability/recording_coordinator.cpp
   src/ui/app_view_model.cpp
   src/ui/history_formatting.cpp
   src/ui/theme.cpp
@@ -95,6 +97,8 @@ test_srcs=(
   tests/settings/settings_service_test.cpp
   tests/system/hotkey_test.cpp
   tests/reliability/emergency_buffer_test.cpp
+  tests/reliability/recovery_test.cpp
+  tests/reliability/recording_coordinator_test.cpp
   tests/ui/app_view_model_test.cpp
   tests/ui/history_formatting_test.cpp
   tests/ui/theme_test.cpp

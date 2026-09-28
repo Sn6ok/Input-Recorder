@@ -5,8 +5,12 @@
 namespace ir {
 
 ClipboardProcessor::ClipboardProcessor(EventIdAllocator& ids, SessionId session,
-                                       std::uint64_t max_bytes)
-    : ids_(ids), session_(session), max_bytes_(max_bytes == 0 ? 1 : max_bytes) {}
+                                       std::uint64_t max_bytes,
+                                       std::uint64_t first_entry_id)
+    : ids_(ids),
+      session_(session),
+      max_bytes_(max_bytes == 0 ? 1 : max_bytes),
+      next_entry_id_(first_entry_id == 0 ? 1 : first_entry_id) {}
 
 void ClipboardProcessor::note_self_copy(const std::string& utf8) {
     self_copy_pending_ = true;

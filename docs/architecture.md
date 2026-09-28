@@ -212,7 +212,21 @@ an async writer, and the UI thread never blocks on I/O.
   (Shell_NotifyIcon on a message-only window) shows the state tooltip and a
   Pause/Resume · Show/Hide · Settings · Exit menu, with double-click to
   show/hide. 5 new tests; 158 OS-independent tests total.
-- [ ] **Phase 13** — Recovery/reliability.
+- [x] **Phase 13** — Reliability + app assembly. OS-free (tested):
+  `EmergencyBuffer` — a crash-safe append-only overflow log (length-prefixed,
+  flushed per record, tolerant of a truncated tail, size-capped); `recovery` —
+  `mark_interrupted_sessions` (flags sessions a crashed run left Active) and
+  `replay_emergency_buffer` (drains the buffer into storage, then clears);
+  `RecordingCoordinator` — the single consumer thread draining the queue into
+  reconstruction + async storage + policy-driven snapshots, publishing a
+  thread-safe view for the UI, with a degraded mode that routes to the emergency
+  buffer when storage is unavailable (validated race-free under TSan). Also made
+  `ContextTracker`/`ClipboardProcessor` id counters seedable (so ids stay unique
+  across runs) and let the keyboard/mouse hooks stamp the active context.
+  Win32 (compiled-by-inspection): `Application` assembles storage + recovery +
+  the writer + coordinator + capture + window + tray + hotkey and tears them down
+  cleanly (finalising the session); `wWinMain` launches it as a single-instance
+  GUI app. 12 new tests; 170 OS-independent tests total.
 - [ ] **Phase 14** — Security hardening.
 - [ ] **Phase 15** — Performance optimization.
 - [ ] **Phase 16** — Full QA.

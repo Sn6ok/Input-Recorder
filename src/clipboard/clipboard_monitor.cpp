@@ -56,8 +56,8 @@ LRESULT CALLBACK ClipWndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) 
 
 ClipboardMonitor::ClipboardMonitor(EventQueue& queue, EventIdAllocator& ids,
                                    SessionId session, std::uint64_t max_bytes,
-                                   EntrySink on_entry)
-    : processor_(ids, session, max_bytes),
+                                   EntrySink on_entry, std::uint64_t first_entry_id)
+    : processor_(ids, session, max_bytes, first_entry_id),
       queue_(queue),
       on_entry_(std::move(on_entry)) {}
 

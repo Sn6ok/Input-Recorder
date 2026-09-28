@@ -26,6 +26,17 @@ TEST_CASE("clipboard.proc", "external copy produces an entry and an event") {
     CHECK(ref.entry == r.entry->id);
 }
 
+TEST_CASE("clipboard.proc", "first_entry_id seeds entry ids for cross-run uniqueness") {
+    ir::EventIdAllocator ids;
+    ir::ClipboardProcessor p(ids, ir::SessionId{1}, 1u << 20, /*first_entry_id=*/50);
+    auto r = p.on_clipboard_text("hi", 1, 1, ctx0);
+    REQUIRE(r.entry.has_value());
+    CHECK_EQ(r.entry->id.value, 50u);
+    auto r2 = p.on_clipboard_text("bye", 2, 2, ctx0);
+    REQUIRE(r2.entry.has_value());
+    CHECK_EQ(r2.entry->id.value, 51u);
+}
+
 TEST_CASE("clipboard.proc", "identical consecutive content is suppressed") {
     ir::EventIdAllocator ids;
     ir::ClipboardProcessor p(ids, ir::SessionId{1}, 1u << 20);

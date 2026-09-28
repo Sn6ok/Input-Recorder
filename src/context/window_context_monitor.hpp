@@ -28,7 +28,8 @@ public:
     using ContextSink = std::function<void(const Context&)>;
 
     WindowContextMonitor(EventQueue& queue, EventIdAllocator& ids,
-                         SessionId session, ContextSink on_context = {});
+                         SessionId session, ContextSink on_context = {},
+                         std::uint64_t first_context_id = 1);
     ~WindowContextMonitor();
 
     WindowContextMonitor(const WindowContextMonitor&) = delete;

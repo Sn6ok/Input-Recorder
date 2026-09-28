@@ -34,6 +34,9 @@ add_executable(ir_tests
     ui/tray_menu_model_test.cpp
     settings/settings_service_test.cpp
     system/hotkey_test.cpp
+    reliability/emergency_buffer_test.cpp
+    reliability/recovery_test.cpp
+    reliability/recording_coordinator_test.cpp
 )
 
 target_include_directories(ir_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

@@ -42,6 +42,8 @@ public:
     void set_status(RecordingStatus status);
     void set_reconstruction(const std::string& text, Confidence confidence);
     void set_dark_theme(bool dark);
+    // When true, closing the window hides it to the tray instead of quitting.
+    void set_close_to_tray(bool value) { close_to_tray_ = value; }
 
     const AppViewModel& model() const { return model_; }
 
@@ -71,6 +73,7 @@ private:
     void* history_btn_ = nullptr;  // HWND
     void* bg_brush_ = nullptr;     // HBRUSH for the themed background
     bool dark_ = false;
+    bool close_to_tray_ = false;
 
     AppViewModel model_;
     Callbacks callbacks_;

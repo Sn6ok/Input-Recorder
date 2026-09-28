@@ -27,7 +27,11 @@ namespace ir {
 
 class ContextTracker {
 public:
-    explicit ContextTracker(SessionId session) : session_(session) {}
+    // `first_id` seeds the ContextId counter so ids stay globally unique across
+    // runs (the app passes storage's max context id + 1, spec §445); it defaults
+    // to 1 for standalone/tests.
+    explicit ContextTracker(SessionId session, std::uint64_t first_id = 1)
+        : session_(session), next_id_(first_id), first_id_(first_id) {}
 
     struct Update {
         bool changed = false;   // the active context changed (emit ContextChanged)
@@ -70,6 +74,7 @@ private:
 
     SessionId session_;
     std::uint64_t next_id_ = 1;
+    std::uint64_t first_id_ = 1;
     ContextId current_{};
     std::unordered_map<ContextId, Context> by_id_;
     std::unordered_map<Key, ContextId, KeyHash> by_key_;

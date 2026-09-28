@@ -30,8 +30,11 @@ struct ClipboardResult {
 
 class ClipboardProcessor {
 public:
+    // `first_entry_id` seeds the ClipboardEntryId counter so ids stay globally
+    // unique across runs (the app passes storage's max entry id + 1); defaults to
+    // 1 for standalone/tests.
     ClipboardProcessor(EventIdAllocator& ids, SessionId session,
-                       std::uint64_t max_bytes);
+                       std::uint64_t max_bytes, std::uint64_t first_entry_id = 1);
 
     // Handle observed clipboard text. Returns a new entry + event on a genuine
     // change, or a suppressed result for a duplicate/self-generated change.

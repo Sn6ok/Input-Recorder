@@ -28,7 +28,8 @@ public:
     using EntrySink = std::function<void(const ClipboardEntry&)>;
 
     ClipboardMonitor(EventQueue& queue, EventIdAllocator& ids, SessionId session,
-                     std::uint64_t max_bytes, EntrySink on_entry = {});
+                     std::uint64_t max_bytes, EntrySink on_entry = {},
+                     std::uint64_t first_entry_id = 1);
     ~ClipboardMonitor();
 
     ClipboardMonitor(const ClipboardMonitor&) = delete;
