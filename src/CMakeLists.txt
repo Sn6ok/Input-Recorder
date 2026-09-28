@@ -33,7 +33,10 @@ add_library(input_recorder_lib STATIC
     ui/main_window.cpp
     ui/history_window.cpp
     ui/settings_window.cpp
+    ui/tray_icon.cpp
     settings/settings_service.cpp
+    system/hotkey.cpp
+    system/global_hotkey.cpp
 )
 
 target_include_directories(input_recorder_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

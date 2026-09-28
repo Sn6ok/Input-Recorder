@@ -98,6 +98,7 @@ test_srcs=(
   tests/ui/app_view_model_test.cpp
   tests/ui/history_formatting_test.cpp
   tests/ui/theme_test.cpp
+  tests/ui/tray_menu_model_test.cpp
 )
 
 # Portable SQLite amalgamation, compiled as C when vendored (added in Phase 8).

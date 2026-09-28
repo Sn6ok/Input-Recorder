@@ -31,7 +31,9 @@ add_executable(ir_tests
     ui/app_view_model_test.cpp
     ui/history_formatting_test.cpp
     ui/theme_test.cpp
+    ui/tray_menu_model_test.cpp
     settings/settings_service_test.cpp
+    system/hotkey_test.cpp
 )
 
 target_include_directories(ir_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

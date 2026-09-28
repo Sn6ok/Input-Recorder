@@ -202,7 +202,16 @@ an async writer, and the UI thread never blocks on I/O.
   clipboard/window/startup toggles, theme combo, retention days; Save routes a
   validated Configuration back to the service). 7 new tests; 153 OS-independent
   tests total.
-- [ ] **Phase 12** — System tray & global hotkey.
+- [x] **Phase 12** — System tray & global hotkey. OS-free (tested):
+  `to_win32_modifiers`/`is_registerable` map a Hotkey to the RegisterHotKey mask
+  (always MOD_NOREPEAT; a bare key is rejected), and `tray_menu` computes the
+  tooltip + context-menu labels from recording status and window visibility.
+  Win32 (compiled-by-inspection): `GlobalHotkey` registers the toggle combo on a
+  dedicated message-loop thread and fires a callback on WM_HOTKEY (fails
+  gracefully if the combo is taken; rebind at runtime); `TrayIcon`
+  (Shell_NotifyIcon on a message-only window) shows the state tooltip and a
+  Pause/Resume · Show/Hide · Settings · Exit menu, with double-click to
+  show/hide. 5 new tests; 158 OS-independent tests total.
 - [ ] **Phase 13** — Recovery/reliability.
 - [ ] **Phase 14** — Security hardening.
 - [ ] **Phase 15** — Performance optimization.
