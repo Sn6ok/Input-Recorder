@@ -31,6 +31,23 @@ These constraints are hard requirements and shape every design decision:
 | Storage     | SQLite (embedded, `%LOCALAPPDATA%\InputRecorder\`)  |
 | Tests       | In-repo header-only framework (no external dep)     |
 
+### Build & verification (Windows vs. non-Windows CI)
+
+The **authoritative** build and test gate is `scripts/build.ps1 -Test
+-WarningsAsErrors` on Windows (MSVC, `/W4 /WX`), which compiles everything —
+including the Win32 hooks, clipboard, window context, tray and UI — and runs the
+full test suite via CTest.
+
+Because most application logic lives in the OS-free `input_recorder_lib`, a
+supplementary POSIX harness (`scripts/build-posix-tests.sh`, clang/g++,
+`-Wall -Wextra -Wpedantic -Werror`) compiles the OS-independent subset plus the
+portable SQLite amalgamation and runs those tests on Linux/macOS CI. This gives a
+real green/red signal for the portable core off Windows. Files that include
+`<Windows.h>` (the `*_hook`/`*_monitor`/window-context/UI/tray translation units)
+are **only** compiled by the Windows build; on other platforms they are verified
+by inspection against the proven `KeyboardHook`/`ClipboardMonitor` patterns. Each
+phase below notes which parts are exercised by the POSIX harness vs. Windows-only.
+
 ### Why an in-repo test framework
 
 The spec forbids adding third-party dependencies without real need and the
@@ -115,7 +132,14 @@ an async writer, and the UI thread never blocks on I/O.
   resolved text. `ClipboardMonitor` (Win32): message-only window +
   `AddClipboardFormatListener` (event-driven), bounded-retry `CF_UNICODETEXT`
   read, thread-safe. UTF-16↔UTF-8 utils. 7 tests.
-- [ ] **Phase 6** — Mouse subsystem.
+- [x] **Phase 6** — Mouse subsystem. `MouseProcessor` (OS-free, tested): maps
+  raw mouse inputs to MouseButton/MouseWheel/MouseMove events, honors the
+  record-buttons/wheel/movement toggles, and throttles movement to the
+  configured sampling interval (movement off by default). `MouseHook`
+  (`WH_MOUSE_LL` on a dedicated message-loop thread): minimal non-blocking
+  callback decoding L/R/M/X buttons + vertical/horizontal wheel, single-instance
+  guard, bounded retry/backoff, thread-safe runtime settings update. 11 new
+  processor tests (POSIX harness) + 3 Win32 lifecycle tests (Windows only).
 - [ ] **Phase 7** — Window/process context.
 - [ ] **Phase 8** — Storage (SQLite).
 - [ ] **Phase 9** — History (search, snapshots, retention).

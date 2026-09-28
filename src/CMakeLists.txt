@@ -16,6 +16,8 @@ add_library(input_recorder_lib STATIC
     reconstruction/reconstruction_engine.cpp
     clipboard/clipboard_processor.cpp
     clipboard/clipboard_monitor.cpp
+    mouse/mouse_processor.cpp
+    capture/mouse_hook.cpp
 )
 
 target_include_directories(input_recorder_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
