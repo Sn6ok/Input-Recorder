@@ -21,6 +21,8 @@ add_executable(ir_tests
     clipboard/clipboard_monitor_test.cpp
     mouse/mouse_processor_test.cpp
     capture/mouse_hook_test.cpp
+    context/context_tracker_test.cpp
+    context/window_context_monitor_test.cpp
 )
 
 target_include_directories(ir_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

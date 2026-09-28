@@ -18,6 +18,8 @@ add_library(input_recorder_lib STATIC
     clipboard/clipboard_monitor.cpp
     mouse/mouse_processor.cpp
     capture/mouse_hook.cpp
+    context/context_tracker.cpp
+    context/window_context_monitor.cpp
 )
 
 target_include_directories(input_recorder_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

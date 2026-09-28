@@ -140,7 +140,17 @@ an async writer, and the UI thread never blocks on I/O.
   callback decoding L/R/M/X buttons + vertical/horizontal wheel, single-instance
   guard, bounded retry/backoff, thread-safe runtime settings update. 11 new
   processor tests (POSIX harness) + 3 Win32 lifecycle tests (Windows only).
-- [ ] **Phase 7** — Window/process context.
+- [x] **Phase 7** — Window/process context. `ContextTracker` (OS-free, tested):
+  turns foreground-window observations into stable Context records with unique
+  ids, deduplicates return-visits to a window/title seen this session (cache
+  hit reuses the id), treats a title change on the same window as a distinct
+  context so history keeps what the window said, and emits no event for a
+  re-observed active window. `WindowContextMonitor` (Win32 `SetWinEventHook`
+  on EVENT_SYSTEM_FOREGROUND..EVENT_OBJECT_NAMECHANGE, event-driven, no polling):
+  reads process base-name + window title, publishes the active ContextId for
+  other capture sources to stamp, pushes ContextChanged events and hands Context
+  records to a storage sink; single-instance guard + bounded retry. 9 tracker
+  tests (POSIX harness) + 2 Win32 lifecycle tests (Windows only).
 - [ ] **Phase 8** — Storage (SQLite).
 - [ ] **Phase 9** — History (search, snapshots, retention).
 - [ ] **Phase 10** — Main UI (Win32).
