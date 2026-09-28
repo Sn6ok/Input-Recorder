@@ -41,7 +41,8 @@ public:
 
     // App -> UI updates (call on the UI thread).
     void set_status(RecordingStatus status);
-    void set_reconstruction(const std::string& text, Confidence confidence);
+    void set_reconstruction(const std::string& text, const std::string& annotated,
+                            Confidence confidence);
     void set_dark_theme(bool dark);
     // When true, closing the window hides it to the tray instead of quitting.
     void set_close_to_tray(bool value) { close_to_tray_ = value; }

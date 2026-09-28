@@ -241,6 +241,34 @@ TEST_CASE("recon.uncertainty", "mouse click makes caret position unknown") {
     CHECK(h.engine.confidence() == ir::Confidence::Medium);
 }
 
+// ---- annotated view: special keys & shortcuts as inline markers ----------
+TEST_CASE("recon.annotated", "special keys and shortcuts appear as markers") {
+    Harness h;
+    h.type("ab");
+    h.key(kReturn);            // Enter
+    h.type("cd");
+    h.key(kTab);               // Tab
+    h.key('S', kCtrl | kShift);  // Ctrl+Shift+S shortcut (KeyDown + modifiers)
+
+    // Clean recovered text (Copy All) is unaffected by annotation.
+    CHECK_EQ(h.text(), std::string("ab\ncd\t"));
+
+    // The annotated view carries the typed text plus key/shortcut markers.
+    const std::string ann = h.engine.annotated_text();
+    CHECK(ann.find("ab") != std::string::npos);
+    CHECK(ann.find("cd") != std::string::npos);
+    CHECK(ann.find("(Enter)") != std::string::npos);
+    CHECK(ann.find("(Tab)") != std::string::npos);
+    CHECK(ann.find("(Ctrl + Shift + S)") != std::string::npos);
+}
+
+TEST_CASE("recon.annotated", "backspace trims typed text in the annotated view") {
+    Harness h;
+    h.type("hello");
+    h.key(kBack);
+    CHECK_EQ(h.engine.annotated_text(), std::string("hell"));
+}
+
 // ---- snapshot / restore (point-in-time, §211) ----------------------------
 TEST_CASE("recon.snapshot", "snapshot and restore round-trips state") {
     Harness h;

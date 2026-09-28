@@ -1,6 +1,7 @@
 #include "reconstruction/reconstruction_engine.hpp"
 
 #include <algorithm>
+#include <cstdio>
 
 namespace ir {
 namespace {
@@ -25,6 +26,47 @@ constexpr std::uint16_t kVkZ = 0x5A;
 
 bool is_word_separator(char32_t c) {
     return c == U' ' || c == U'\t' || c == U'\n' || c == U'\r';
+}
+
+bool is_modifier_vk(std::uint16_t vk) {
+    switch (vk) {
+        case 0x10: case 0x11: case 0x12:        // Shift/Ctrl/Alt
+        case 0xA0: case 0xA1: case 0xA2: case 0xA3: case 0xA4: case 0xA5:  // L/R
+        case 0x5B: case 0x5C:                    // L/R Win
+        case 0x14: case 0x90: case 0x91:         // Caps/Num/Scroll lock
+            return true;
+        default:
+            return false;
+    }
+}
+
+// A short human label for a virtual key, used in annotation markers.
+std::string vk_key_label(std::uint16_t vk) {
+    if ((vk >= 'A' && vk <= 'Z') || (vk >= '0' && vk <= '9')) {
+        return std::string(1, static_cast<char>(vk));
+    }
+    switch (vk) {
+        case 0x0D: return "Enter";
+        case 0x09: return "Tab";
+        case 0x1B: return "Esc";
+        case 0x20: return "Space";
+        case 0x08: return "Backspace";
+        case 0x2E: return "Delete";
+        case 0x25: return "Left";
+        case 0x27: return "Right";
+        case 0x26: return "Up";
+        case 0x28: return "Down";
+        case 0x24: return "Home";
+        case 0x23: return "End";
+        case 0x21: return "PageUp";
+        case 0x22: return "PageDown";
+        case 0x2D: return "Insert";
+        default: break;
+    }
+    if (vk >= 0x70 && vk <= 0x87) return "F" + std::to_string(vk - 0x70 + 1);
+    char buf[8];
+    std::snprintf(buf, sizeof(buf), "VK_%02X", vk);
+    return std::string(buf);
 }
 
 }  // namespace
@@ -222,7 +264,80 @@ void ReconstructionEngine::handle_shortcut(const ShortcutData& shortcut) {
     }
 }
 
+void ReconstructionEngine::append_marker(const std::string& label) {
+    // CRLF so Win32 multi-line EDIT controls actually break the line, putting
+    // each key/shortcut marker on its own line.
+    if (!annotated_.empty() && annotated_.back() != '\n') annotated_ += "\r\n";
+    annotated_ += '(';
+    annotated_ += label;
+    annotated_ += ")\r\n";
+}
+
+void ReconstructionEngine::annotated_backspace() {
+    if (annotated_.empty()) return;
+    const char last = annotated_.back();
+    if (last == '\n' || last == ')') return;  // don't corrupt a marker
+    annotated_.pop_back();
+    // Remove the rest of a multi-byte UTF-8 code point.
+    while (!annotated_.empty() &&
+           (static_cast<unsigned char>(annotated_.back()) & 0xC0) == 0x80) {
+        annotated_.pop_back();
+    }
+}
+
+void ReconstructionEngine::annotate(const Event& event) {
+    switch (event.type) {
+        case EventType::TextInput:
+        case EventType::Paste:
+            if (const auto* t = std::get_if<TextInputData>(&event.payload)) {
+                annotated_ += t->text;
+            }
+            break;
+        case EventType::KeyboardShortcut:
+            if (const auto* s = std::get_if<ShortcutData>(&event.payload)) {
+                append_marker(s->text.empty() ? "shortcut" : s->text);
+            }
+            break;
+        case EventType::KeyDown: {
+            const auto* k = std::get_if<KeyEventData>(&event.payload);
+            if (k == nullptr) break;
+            const std::uint16_t vk = k->virtual_key;
+            if (is_modifier_vk(vk)) break;
+
+            const bool ctrl = has_flag(event.flags, EventFlags::ModCtrl);
+            const bool alt = has_flag(event.flags, EventFlags::ModAlt);
+            const bool win = has_flag(event.flags, EventFlags::ModWin);
+            const bool shift = has_flag(event.flags, EventFlags::ModShift);
+
+            if (ctrl || alt || win) {
+                // A shortcut combination, e.g. "Ctrl + Shift + S".
+                std::string label;
+                if (ctrl) label += "Ctrl + ";
+                if (shift) label += "Shift + ";
+                if (alt) label += "Alt + ";
+                if (win) label += "Win + ";
+                label += vk_key_label(vk);
+                append_marker(label);
+            } else if (vk == 0x0D) {
+                append_marker("Enter");
+            } else if (vk == 0x09) {
+                append_marker("Tab");
+            } else if (vk == 0x08) {
+                annotated_backspace();
+            } else if (vk == 0x1B) {
+                append_marker("Esc");
+            }
+            // Ordinary character keys add nothing here; their text arrives as a
+            // TextInput event and is appended above.
+            break;
+        }
+        default:
+            break;
+    }
+}
+
 void ReconstructionEngine::process(const Event& event) {
+    annotate(event);
     switch (event.type) {
         case EventType::TextInput:
             if (const auto* t = std::get_if<TextInputData>(&event.payload)) {

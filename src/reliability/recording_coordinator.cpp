@@ -73,6 +73,7 @@ void RecordingCoordinator::process(const Event& e) {
 void RecordingCoordinator::publish_view() {
     std::lock_guard<std::mutex> lock(view_mutex_);
     view_text_ = engine_.text();
+    view_annotated_ = engine_.annotated_text();
     view_confidence_ = engine_.confidence();
     view_processed_ = processed_count_;
 }
@@ -91,7 +92,7 @@ void RecordingCoordinator::run() {
 
 RecordingCoordinator::View RecordingCoordinator::view() const {
     std::lock_guard<std::mutex> lock(view_mutex_);
-    return View{view_text_, view_confidence_, view_processed_};
+    return View{view_text_, view_annotated_, view_confidence_, view_processed_};
 }
 
 std::uint64_t RecordingCoordinator::processed() const {

@@ -230,7 +230,7 @@ void Application::toggle_recording() {
 void Application::refresh_ui() {
     if (!coordinator_) return;
     const RecordingCoordinator::View v = coordinator_->view();
-    window_.set_reconstruction(v.text, v.confidence);
+    window_.set_reconstruction(v.text, v.annotated, v.confidence);
 }
 
 void Application::open_history() {

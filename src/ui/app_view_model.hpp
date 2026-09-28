@@ -38,9 +38,18 @@ public:
     }
     std::string status_indicator() const { return ir::status_indicator(status_); }
 
-    // Update the reconstructed text shown in the read-only view.
+    // Update the reconstructed text. The single-text overload shows the same
+    // text verbatim (used in tests); the app passes an annotated view for the
+    // read-only display while keeping the clean text for Copy All.
     void set_reconstruction(std::string text, Confidence confidence) {
         text_ = std::move(text);
+        annotated_ = text_;
+        confidence_ = confidence;
+    }
+    void set_reconstruction(std::string text, std::string annotated,
+                            Confidence confidence) {
+        text_ = std::move(text);
+        annotated_ = std::move(annotated);
         confidence_ = confidence;
     }
     const std::string& text() const { return text_; }
@@ -59,7 +68,8 @@ public:
 
 private:
     RecordingStatus status_ = RecordingStatus::Recording;
-    std::string text_;
+    std::string text_;       // clean recovered text (Copy All)
+    std::string annotated_;  // annotated view with key/shortcut markers
     Confidence confidence_ = Confidence::High;
 };
 

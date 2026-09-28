@@ -50,7 +50,8 @@ public:
     void stop();  // closes the queue, drains the remainder, joins
 
     struct View {
-        std::string text;
+        std::string text;       // clean recovered text (Copy All)
+        std::string annotated;  // annotated view with key/shortcut markers
         Confidence confidence = Confidence::High;
         std::uint64_t processed = 0;
     };
@@ -87,6 +88,7 @@ private:
 
     mutable std::mutex view_mutex_;
     std::string view_text_;
+    std::string view_annotated_;
     Confidence view_confidence_ = Confidence::High;
     std::uint64_t view_processed_ = 0;
 

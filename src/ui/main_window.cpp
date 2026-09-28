@@ -350,8 +350,10 @@ void MainWindow::set_status(RecordingStatus status) {
     refresh_status();
 }
 
-void MainWindow::set_reconstruction(const std::string& text, Confidence confidence) {
-    model_.set_reconstruction(text, confidence);
+void MainWindow::set_reconstruction(const std::string& text,
+                                    const std::string& annotated,
+                                    Confidence confidence) {
+    model_.set_reconstruction(text, annotated, confidence);
     refresh_text();
 }
 

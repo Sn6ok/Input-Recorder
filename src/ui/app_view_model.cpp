@@ -8,11 +8,11 @@ std::string status_indicator(RecordingStatus s) {
 }
 
 std::string AppViewModel::display_text() const {
-    if (text_.empty()) {
+    if (annotated_.empty()) {
         return "No text has been reconstructed yet. Start typing in any "
                "application and it will appear here.";
     }
-    return text_;
+    return annotated_;
 }
 
 std::string AppViewModel::confidence_note() const {

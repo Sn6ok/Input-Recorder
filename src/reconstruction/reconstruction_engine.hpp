@@ -36,7 +36,16 @@ public:
     bool cursor_known() const { return state_.cursor_known; }
     bool selection_active() const { return state_.selection_active; }
 
-    void reset() { state_ = TextState{}; }
+    // An annotated, append-style rendering of the input for the live view: the
+    // typed text with inline markers for special keys and shortcuts, e.g.
+    // "hello(Enter)\n(Ctrl + Shift + S)\nworld". Separate from text() so Copy All
+    // still yields clean, pasteable recovered text.
+    const std::string& annotated_text() const { return annotated_; }
+
+    void reset() {
+        state_ = TextState{};
+        annotated_.clear();
+    }
 
     TextState snapshot() const { return state_; }
     void restore(const TextState& s) { state_ = s; }
@@ -60,7 +69,13 @@ private:
     void handle_key_down(const Event& event);
     void handle_shortcut(const ShortcutData& shortcut);
 
+    // Builds the annotated view (does not touch the clean buffer).
+    void annotate(const Event& event);
+    void append_marker(const std::string& label);
+    void annotated_backspace();
+
     TextState state_;
+    std::string annotated_;  // append-style annotated view (UTF-8)
 };
 
 }  // namespace ir
