@@ -241,6 +241,15 @@ an async writer, and the UI thread never blocks on I/O.
   honoring layout/Shift/Caps/AltGr/dead keys) and emits TextInput events, so the
   reconstruction engine actually rebuilds typed text. 2 new tests; 172
   OS-independent tests total.
-- [ ] **Phase 15** — Performance optimization.
+- [x] **Phase 15** — Performance. Added `bench/perf_bench.cpp` +
+  `scripts/bench-posix.sh` and measured the OS-free hot paths for real
+  (Linux/clang -O2): EventQueue ~12.9M ops/sec, serialize+deserialize ~3.8M
+  ops/sec (53 B/event), reconstruction ~36.8M ops/sec, SQLite batched writes
+  ~42.6K events/sec (~79 disk-B/event), `sizeof(Event)`=96 B, fixed queue ~6 MiB,
+  peak RSS ~27 MiB. Against real input (<100 events/sec) the slowest stage
+  (storage) has a 400×+ margin and I/O is fully off the capture path, so idle/
+  typing CPU is negligible and memory is bounded. `docs/performance.md` records
+  the numbers and honestly marks Windows end-to-end idle-CPU/working-set as
+  pending on-Windows measurement (can't run here). No hot-path change was needed.
 - [ ] **Phase 16** — Full QA.
 - [ ] **Phase 17** — Release.
