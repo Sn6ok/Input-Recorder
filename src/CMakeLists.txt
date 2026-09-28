@@ -24,6 +24,8 @@ add_library(input_recorder_lib STATIC
     storage/event_store.cpp
     storage/storage_worker.cpp
     storage/storage_paths.cpp
+    history/history_service.cpp
+    history/snapshot_policy.cpp
 )
 
 target_include_directories(input_recorder_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

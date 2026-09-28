@@ -26,6 +26,8 @@ add_executable(ir_tests
     storage/sqlite_database_test.cpp
     storage/event_store_test.cpp
     storage/storage_worker_test.cpp
+    history/history_service_test.cpp
+    history/snapshot_policy_test.cpp
 )
 
 target_include_directories(ir_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

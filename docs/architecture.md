@@ -167,7 +167,17 @@ an async writer, and the UI thread never blocks on I/O.
   free under ThreadSanitizer. `storage_paths` (Win32) resolves
   `%LOCALAPPDATA%\InputRecorder\`. 22 storage tests run for real on the POSIX
   harness (SQLite compiles there); 116 OS-independent tests total.
-- [ ] **Phase 9** — History (search, snapshots, retention).
+- [x] **Phase 9** — History (search, snapshots, retention). `SnapshotPolicy`
+  (OS-free): a snapshot is due after N recorded events or T ms, whichever first.
+  `HistoryService` over `EventStore`: paginated + filtered event/clipboard/
+  session listings; FTS5 full-text search over recorded text and clipboard
+  content with a safe MATCH builder (arbitrary user input can't cause a query
+  error); point-in-time reconstruction — full replay and a snapshot-accelerated
+  path proven equal to it; retention — age-based `purge_before`/`apply_retention`
+  (days<=0 keeps forever), `clear_all`, `database_size_bytes`, and a storage
+  size cap that trims oldest events and reclaims pages (incremental auto-vacuum).
+  Extended `TextSnapshot` with caret state so snapshot restore is exact. 17 new
+  tests (POSIX harness); 133 OS-independent tests total.
 - [ ] **Phase 10** — Main UI (Win32).
 - [ ] **Phase 11** — Settings & themes.
 - [ ] **Phase 12** — System tray & global hotkey.

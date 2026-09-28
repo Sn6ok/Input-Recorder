@@ -64,7 +64,9 @@ CREATE TABLE IF NOT EXISTS snapshots (
     anchor_event INTEGER NOT NULL,
     timestamp_ms INTEGER NOT NULL,
     text         TEXT NOT NULL,
-    confidence   INTEGER NOT NULL
+    confidence   INTEGER NOT NULL,
+    cursor       INTEGER NOT NULL DEFAULT 0,
+    cursor_known INTEGER NOT NULL DEFAULT 1
 );
 CREATE INDEX IF NOT EXISTS idx_events_session ON events(session_id);
 CREATE INDEX IF NOT EXISTS idx_events_wall    ON events(wall_ms);
@@ -72,6 +74,29 @@ CREATE INDEX IF NOT EXISTS idx_events_type    ON events(type);
 CREATE INDEX IF NOT EXISTS idx_ctx_session    ON contexts(session_id);
 CREATE INDEX IF NOT EXISTS idx_clip_session   ON clipboard_entries(session_id);
 CREATE INDEX IF NOT EXISTS idx_snap_session   ON snapshots(session_id);
+
+-- Full-text search over event text (TextInput / Paste / shortcut labels) and
+-- clipboard text (spec §187). External-content FTS5 kept in sync by triggers;
+-- event/clipboard text is immutable so only insert/delete triggers are needed.
+CREATE VIRTUAL TABLE IF NOT EXISTS events_fts USING fts5(
+    text, content='events', content_rowid='id', tokenize='unicode61');
+CREATE TRIGGER IF NOT EXISTS events_fts_ai AFTER INSERT ON events
+    WHEN new.text IS NOT NULL BEGIN
+    INSERT INTO events_fts(rowid, text) VALUES (new.id, new.text);
+END;
+CREATE TRIGGER IF NOT EXISTS events_fts_ad AFTER DELETE ON events
+    WHEN old.text IS NOT NULL BEGIN
+    INSERT INTO events_fts(events_fts, rowid, text) VALUES('delete', old.id, old.text);
+END;
+
+CREATE VIRTUAL TABLE IF NOT EXISTS clip_fts USING fts5(
+    text, content='clipboard_entries', content_rowid='id', tokenize='unicode61');
+CREATE TRIGGER IF NOT EXISTS clip_fts_ai AFTER INSERT ON clipboard_entries BEGIN
+    INSERT INTO clip_fts(rowid, text) VALUES (new.id, new.text);
+END;
+CREATE TRIGGER IF NOT EXISTS clip_fts_ad AFTER DELETE ON clipboard_entries BEGIN
+    INSERT INTO clip_fts(clip_fts, rowid, text) VALUES('delete', old.id, old.text);
+END;
 )sql";
 
 }  // namespace
@@ -92,7 +117,11 @@ bool EventStore::apply_pragmas() {
     // WAL keeps readers (UI) from blocking the writer and survives crashes
     // better (spec §172, §176). synchronous=NORMAL is the recommended, durable-
     // enough companion to WAL. A busy timeout avoids spurious SQLITE_BUSY.
+    // auto_vacuum must be set before any table is created (fresh database), so
+    // it comes first; it lets retention reclaim freed pages with
+    // `PRAGMA incremental_vacuum` (spec §259, size cap) without a full VACUUM.
     return db_.exec(
+        "PRAGMA auto_vacuum=INCREMENTAL;"
         "PRAGMA journal_mode=WAL;"
         "PRAGMA synchronous=NORMAL;"
         "PRAGMA foreign_keys=ON;"
@@ -231,7 +260,8 @@ bool EventStore::insert_event(const Event& e) {
 bool EventStore::insert_snapshot(const TextSnapshot& s) {
     SqliteStatement st = db_.prepare(
         "INSERT INTO snapshots(id,session_id,context_id,anchor_event,timestamp_ms,"
-        "text,confidence) VALUES(?1,?2,?3,?4,?5,?6,?7) ON CONFLICT(id) DO NOTHING;");
+        "text,confidence,cursor,cursor_known) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9) "
+        "ON CONFLICT(id) DO NOTHING;");
     if (!st.valid()) return false;
     st.bind_int64(1, static_cast<std::int64_t>(s.id.value));
     st.bind_int64(2, static_cast<std::int64_t>(s.session.value));
@@ -240,6 +270,8 @@ bool EventStore::insert_snapshot(const TextSnapshot& s) {
     st.bind_int64(5, s.timestamp_ms);
     st.bind_text(6, s.text);
     st.bind_int64(7, static_cast<std::int64_t>(s.confidence));
+    st.bind_int64(8, static_cast<std::int64_t>(s.cursor));
+    st.bind_int64(9, s.cursor_known ? 1 : 0);
     return st.step() == SqliteStatement::Step::Done;
 }
 
@@ -385,7 +417,7 @@ std::optional<Session> EventStore::get_session(SessionId id) {
 std::optional<TextSnapshot> EventStore::get_snapshot(SnapshotId id) {
     SqliteStatement st = db_.prepare(
         "SELECT id,session_id,context_id,anchor_event,timestamp_ms,text,"
-        "confidence FROM snapshots WHERE id=?1;");
+        "confidence,cursor,cursor_known FROM snapshots WHERE id=?1;");
     if (!st.valid()) return std::nullopt;
     st.bind_int64(1, static_cast<std::int64_t>(id.value));
     if (st.step() != SqliteStatement::Step::Row) return std::nullopt;
@@ -397,6 +429,8 @@ std::optional<TextSnapshot> EventStore::get_snapshot(SnapshotId id) {
     s.timestamp_ms = st.column_int64(4);
     s.text = st.column_text(5);
     s.confidence = static_cast<Confidence>(st.column_int64(6));
+    s.cursor = static_cast<std::uint64_t>(st.column_int64(7));
+    s.cursor_known = st.column_int64(8) != 0;
     return s;
 }
 

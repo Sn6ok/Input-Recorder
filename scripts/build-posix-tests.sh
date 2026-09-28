@@ -60,6 +60,7 @@ lib_srcs=(
   src/storage/event_store.cpp
   src/storage/storage_worker.cpp
   src/history/history_service.cpp
+  src/history/snapshot_policy.cpp
   src/settings/settings_service.cpp
   src/system/hotkey.cpp
   src/reliability/emergency_buffer.cpp
@@ -87,6 +88,7 @@ test_srcs=(
   tests/storage/event_store_test.cpp
   tests/storage/storage_worker_test.cpp
   tests/history/history_service_test.cpp
+  tests/history/snapshot_policy_test.cpp
   tests/settings/settings_service_test.cpp
   tests/system/hotkey_test.cpp
   tests/reliability/emergency_buffer_test.cpp
