@@ -1,17 +1,20 @@
 #pragma once
 
-// The main application window — "Studio" layout (spec §226-§301): a custom
-// frameless dark window with a left navigation rail (Live / History / Settings),
-// a title bar with a recording pill and window controls, a read-only view of the
-// reconstructed text with inline key/shortcut markers, and Pause + Copy All.
+// The single application window — "Studio" layout (spec §226-§301): a custom
+// frameless dark window with a left navigation rail (Live / History / Settings)
+// that switches between three in-window views (no separate windows):
+//   * Live     — reconstructed text with inline key/shortcut markers + Pause/Copy
+//   * History  — search box + results list
+//   * Settings — recording toggles, theme, retention + Save
 //
-// All display strings/state come from the OS-free AppViewModel; this file is a
-// thin Win32 shell (header avoids <Windows.h>). App -> UI updates
-// (set_status/set_reconstruction) must run on the UI thread.
+// Display state comes from the OS-free AppViewModel; the app supplies data via
+// callbacks. Header avoids <Windows.h>. App -> UI updates run on the UI thread.
 
 #include <functional>
 #include <string>
+#include <vector>
 
+#include "core/configuration.hpp"
 #include "core/confidence.hpp"
 #include "ui/app_view_model.hpp"
 
@@ -20,11 +23,16 @@ namespace ir {
 class MainWindow {
 public:
     struct Callbacks {
-        std::function<void(bool recording)> on_recording_changed;  // user toggle
-        std::function<void()> on_open_history;
-        std::function<void()> on_open_settings;
-        std::function<void(const std::string& copied_utf8)> on_copy_all;  // self-copy
+        std::function<void(bool recording)> on_recording_changed;
+        std::function<void(const std::string& copied_utf8)> on_copy_all;
+        // History view data source: rows for the given search query ("" = all).
+        std::function<std::vector<std::string>(const std::string& query)> history_source;
+        // Settings view: current config, and apply-on-save.
+        std::function<Configuration()> get_config;
+        std::function<void(const Configuration&)> on_save_settings;
     };
+
+    enum View { kViewLive = 0, kViewHistory = 1, kViewSettings = 2 };
 
     MainWindow() = default;
     ~MainWindow();
@@ -42,6 +50,9 @@ public:
     void set_dark_theme(bool dark);
     void set_close_to_tray(bool value) { close_to_tray_ = value; }
 
+    // Switch the active in-window view (also used by the tray's Settings item).
+    void activate_view(int view);
+
     const AppViewModel& model() const { return model_; }
 
     int run_message_loop();
@@ -52,33 +63,48 @@ public:
 private:
     void on_create();
     void on_size(int width, int height);
-    void on_command(int control_id);
+    void on_command(int control_id, int notify);
     void refresh_status();
     void refresh_text();
     void do_copy_all();
     void apply_theme();
-    void draw_button(void* draw_item_struct);  // WM_DRAWITEM owner-draw
-    void paint_chrome();                        // title bar + sidebar (WM_PAINT)
-    int button_at(int x, int y) const;          // 1=min, 2=close, 0=none
+    void draw_button(void* draw_item_struct);
+    void paint_chrome();
+    int button_at(int x, int y) const;
     void title_button_action(int button);
-    long long hit_test(long long lparam);       // WM_NCHITTEST
+    long long hit_test(long long lparam);
+
+    void build_history_controls(void* inst);
+    void build_settings_controls(void* inst);
+    void refresh_history();
+    void load_settings_controls();
+    Configuration read_settings_controls() const;
+    void layout_content(int width, int height);
 
     void* hwnd_ = nullptr;
-    void* note_label_ = nullptr;    // confidence note (static)
-    void* text_view_ = nullptr;     // read-only edit
-    void* toggle_btn_ = nullptr;    // Pause / Resume
-    void* copy_btn_ = nullptr;      // Copy All
-    void* nav_live_ = nullptr;      // sidebar: Live (active)
-    void* nav_history_ = nullptr;   // sidebar: History
-    void* nav_settings_ = nullptr;  // sidebar: Settings
+    // Live view
+    void* note_label_ = nullptr;
+    void* text_view_ = nullptr;
+    void* toggle_btn_ = nullptr;
+    void* copy_btn_ = nullptr;
+    // History view
+    void* search_edit_ = nullptr;
+    void* list_box_ = nullptr;
+    // Settings view (all controls incl. labels, tracked for show/hide)
+    std::vector<void*> settings_ctrls_;
+    // Sidebar
+    void* nav_live_ = nullptr;
+    void* nav_history_ = nullptr;
+    void* nav_settings_ = nullptr;
 
-    void* bg_brush_ = nullptr;       // main area background
-    void* sidebar_brush_ = nullptr;  // navigation rail background
-    void* panel_brush_ = nullptr;    // text panel background
-    void* body_font_ = nullptr;      // Segoe UI body
-    void* title_font_ = nullptr;     // Segoe UI title / pill
-    void* glyph_font_ = nullptr;     // Segoe UI Symbol for nav glyphs
+    void* bg_brush_ = nullptr;
+    void* sidebar_brush_ = nullptr;
+    void* panel_brush_ = nullptr;
+    void* body_font_ = nullptr;
+    void* title_font_ = nullptr;
+    void* glyph_font_ = nullptr;
 
+    int view_ = kViewLive;
     std::string last_display_;
     int hot_btn_ = 0;
     int pressed_btn_ = 0;

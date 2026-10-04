@@ -138,11 +138,26 @@ bool Application::initialize(void* hinstance, int show_command) {
     // Main window.
     MainWindow::Callbacks wc;
     wc.on_recording_changed = [this](bool) { toggle_recording(); };
-    wc.on_open_history = [this] { open_history(); };
-    wc.on_open_settings = [this] { open_settings(); };
     wc.on_copy_all = [this](const std::string& text) {
         if (clipboard_) clipboard_->note_self_copy(text);
     };
+    wc.history_source = [this](const std::string& query) -> std::vector<std::string> {
+        std::vector<std::string> rows;
+        if (!history_) return rows;
+        if (query.empty()) {
+            EventQuery q;
+            q.limit = 500;
+            q.newest_first = true;
+            for (const Event& e : history_->query_events(q))
+                rows.push_back(format_event_row(e));
+        } else {
+            for (const Event& e : history_->search_events(query, std::nullopt, 500, 0))
+                rows.push_back(format_event_row(e));
+        }
+        return rows;
+    };
+    wc.get_config = [this] { return settings_->config(); };
+    wc.on_save_settings = [this](const Configuration& c) { apply_settings(c); };
     if (!window_.create(hinstance, wc)) return false;
     window_.set_close_to_tray(config.close_to_tray);
     window_.set_dark_theme(effective_dark(config.theme, system_prefers_dark()));
@@ -159,7 +174,12 @@ bool Application::initialize(void* hinstance, int show_command) {
             SetForegroundWindow(h);
         }
     };
-    tc.on_settings = [this] { open_settings(); };
+    tc.on_settings = [this] {
+        HWND h = static_cast<HWND>(window_.handle());
+        ShowWindow(h, SW_SHOW);
+        SetForegroundWindow(h);
+        window_.activate_view(MainWindow::kViewSettings);
+    };
     tc.on_exit = [] { PostQuitMessage(0); };
     tc.window_visible = [this] {
         return IsWindowVisible(static_cast<HWND>(window_.handle())) != FALSE;
