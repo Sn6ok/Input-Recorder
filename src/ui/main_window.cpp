@@ -338,7 +338,7 @@ void MainWindow::toggle_compact() {
         // (left edge, just above the taskbar).
         RECT wa{};
         SystemParametersInfoW(SPI_GETWORKAREA, 0, &wa, 0);
-        const int cw = 250, ch = 116;
+        const int cw = 230, ch = 82;
         SetWindowPos(hwnd, HWND_TOPMOST, wa.left + 12, wa.bottom - ch - 12, cw, ch,
                      SWP_SHOWWINDOW);
     } else {
@@ -361,47 +361,42 @@ void MainWindow::paint_chrome() {
         SetBkMode(dc, TRANSPARENT);
         const bool rec = is_recording(model_.status());
 
+        const int srow = 20;  // status row vertical center
         HBRUSH dotb = CreateSolidBrush(rec ? kAccentBright : kPaused);
         HGDIOBJ odb = SelectObject(dc, dotb);
         HGDIOBJ odp = SelectObject(dc, GetStockObject(NULL_PEN));
-        Ellipse(dc, 14, 16, 24, 26);
+        Ellipse(dc, 14, srow - 5, 24, srow + 5);
         SelectObject(dc, odb);
         SelectObject(dc, odp);
         DeleteObject(dotb);
 
         SetTextColor(dc, rec ? kAccentBright : kPaused);
         HGDIOBJ of = SelectObject(dc, static_cast<HFONT>(title_font_));
-        RECT sr{32, 10, w - 46, 34};
+        RECT sr{30, 0, w - 42, 40};  // tall rect so the text is never clipped
         DrawTextW(dc, rec ? L"Recording" : L"Paused", -1, &sr,
                   DT_LEFT | DT_VCENTER | DT_SINGLELINE);
         SelectObject(dc, of);
 
-        // Expand button (top-right): a square-with-arrow glyph.
-        RECT er{w - 40, 6, w - 8, 36};
+        // Expand button (top-right).
+        RECT er{w - 36, srow - 11, w - 10, srow + 11};
         if (hot_btn_ == 4) fill_round(dc, er, kBtn, 6);
         HPEN pen = CreatePen(PS_SOLID, 1, kText);
         HGDIOBJ op = SelectObject(dc, pen);
         HGDIOBJ ob = SelectObject(dc, GetStockObject(HOLLOW_BRUSH));
-        const int ex = (er.left + er.right) / 2, ey = (er.top + er.bottom) / 2;
-        Rectangle(dc, ex - 6, ey - 5, ex + 6, ey + 6);
+        const int ex = (er.left + er.right) / 2;
+        Rectangle(dc, ex - 6, srow - 5, ex + 6, srow + 6);
         SelectObject(dc, ob);
         SelectObject(dc, op);
         DeleteObject(pen);
 
-        HPEN dpen = CreatePen(PS_SOLID, 1, RGB(40, 44, 52));
+        HPEN dpen = CreatePen(PS_SOLID, 1, RGB(38, 42, 50));
         HGDIOBJ dop = SelectObject(dc, dpen);
-        MoveToEx(dc, 14, 44, nullptr);
-        LineTo(dc, w - 14, 44);
+        MoveToEx(dc, 14, 40, nullptr);
+        LineTo(dc, w - 14, 40);
         SelectObject(dc, dop);
         DeleteObject(dpen);
 
-        SetTextColor(dc, kSubtext);
-        of = SelectObject(dc, static_cast<HFONT>(body_font_));
-        RECT ll{14, 52, w - 14, 70};
-        DrawTextW(dc, L"Last input", -1, &ll, DT_LEFT | DT_SINGLELINE);
-        SelectObject(dc, of);
-
-        // Last input = last non-empty line of the annotated view.
+        // Last input value (no label) = last non-empty line of the annotated view.
         std::string disp = model_.display_text();
         std::string last;
         if (disp.rfind("No text", 0) != 0) {
@@ -417,7 +412,7 @@ void MainWindow::paint_chrome() {
         SetTextColor(dc, kText);
         of = SelectObject(dc, static_cast<HFONT>(title_font_));
         const std::wstring lw = to_w(last);
-        RECT lv{14, 72, w - 14, h - 8};
+        RECT lv{14, 44, w - 14, h - 6};
         DrawTextW(dc, lw.c_str(), -1, &lv,
                   DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
         SelectObject(dc, of);
