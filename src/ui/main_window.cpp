@@ -3,6 +3,7 @@
 #include <Windows.h>
 #include <windowsx.h>
 #include <dwmapi.h>
+#include <uxtheme.h>
 
 #include "utils/unicode.hpp"
 
@@ -259,11 +260,11 @@ long long MainWindow::handle_message(void* hwnd_v, unsigned msg,
             return reinterpret_cast<long long>(panel_brush_);
         }
         case WM_CLOSE:
-            if (close_to_tray_) {
-                ShowWindow(hwnd, SW_HIDE);
-            } else {
-                PostQuitMessage(0);
-            }
+            // The recorder keeps running in the tray; closing just hides the
+            // window. Full exit is via the tray menu (spec: visible, user
+            // controlled). close_to_tray_ is kept for compatibility but the
+            // window always hides rather than quitting.
+            ShowWindow(hwnd, SW_HIDE);
             return 0;
         case WM_DESTROY:
             PostQuitMessage(0);
@@ -309,8 +310,16 @@ void MainWindow::paint_chrome() {
 
     // Recording pill.
     const bool rec = is_recording(model_.status());
+    const wchar_t* pill_text = rec ? L"REC" : L"PAUSED";
+    of = SelectObject(dc, static_cast<HFONT>(body_font_));
+    SIZE ts{};
+    GetTextExtentPoint32W(dc, pill_text, lstrlenW(pill_text), &ts);
+    SelectObject(dc, of);
     const int py = (kTitleH - 22) / 2;
-    RECT pill{kSidebarW + 66, py, kSidebarW + (rec ? 142 : 158), py + 22};
+    const int pill_x = kSidebarW + 66;
+    const int text_off = 12 + 8 + 7;  // left pad + dot + gap
+    const int pill_w = text_off + ts.cx + 12;
+    RECT pill{pill_x, py, pill_x + pill_w, py + 22};
     fill_round(dc, pill, rec ? kAccentBg : kBtn, 11);
     HBRUSH dotb = CreateSolidBrush(rec ? kAccentBright : kPaused);
     HGDIOBJ odb = SelectObject(dc, dotb);
@@ -322,9 +331,8 @@ void MainWindow::paint_chrome() {
     DeleteObject(dotb);
     SetTextColor(dc, rec ? kAccentBright : kPaused);
     of = SelectObject(dc, static_cast<HFONT>(body_font_));
-    RECT ptr{pill.left + 26, pill.top, pill.right, pill.bottom};
-    DrawTextW(dc, rec ? L"RECORDING" : L"PAUSED", -1, &ptr,
-              DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+    RECT ptr{pill.left + text_off, pill.top, pill.right, pill.bottom};
+    DrawTextW(dc, pill_text, -1, &ptr, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
     SelectObject(dc, of);
 
     // Window controls (minimize / close).
@@ -386,6 +394,8 @@ void MainWindow::on_create() {
     text_view_ = make(L"EDIT", L"",
                       ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | WS_VSCROLL,
                       IDC_TEXT, body);
+    // Dark scrollbar to match the theme (replaces the bright system scrollbar).
+    SetWindowTheme(static_cast<HWND>(text_view_), L"DarkMode_Explorer", nullptr);
     toggle_btn_ = make(L"BUTTON", L"Pause", BS_OWNERDRAW, IDC_TOGGLE, body);
     copy_btn_ = make(L"BUTTON", L"Copy All", BS_OWNERDRAW, IDC_COPY, body);
 
@@ -462,6 +472,11 @@ void MainWindow::draw_button(void* dis_v) {
     COLORREF fill = primary ? kAccent : kBtn;
     if (pressed) fill = primary ? RGB(36, 156, 108) : kBtnHot;
     const COLORREF txt = primary ? kOnAccent : kText;
+    // Paint the corners with the window background so the rounded button has no
+    // stray light corners showing through.
+    HBRUSH bgb = CreateSolidBrush(kMain);
+    FillRect(dc, &r, bgb);
+    DeleteObject(bgb);
     fill_round(dc, r, fill, 8);
     SetTextColor(dc, txt);
     HGDIOBJ of = SelectObject(dc, static_cast<HFONT>(body_font_));

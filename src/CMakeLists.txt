@@ -51,7 +51,7 @@ target_compile_features(input_recorder_lib PUBLIC cxx_std_20)
 # Known Folder path resolution (shell32/ole32), GDI + DWM for the themed window,
 # and the vendored SQLite lib.
 target_link_libraries(input_recorder_lib PUBLIC
-    user32 shell32 ole32 gdi32 dwmapi advapi32 comctl32 sqlite3)
+    user32 shell32 ole32 gdi32 dwmapi uxtheme advapi32 comctl32 sqlite3)
 ir_set_target_warnings(input_recorder_lib)
 ir_set_windows_defs(input_recorder_lib)
 
