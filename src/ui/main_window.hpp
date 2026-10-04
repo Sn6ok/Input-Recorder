@@ -66,6 +66,10 @@ private:
     void do_copy_all();
     void apply_theme();
     void draw_button(void* draw_item_struct);  // WM_DRAWITEM owner-draw
+    void paint_chrome();                        // custom title bar (WM_PAINT)
+    int button_at(int x, int y) const;          // 1=min, 2=close, 0=none
+    void title_button_action(int button);
+    long long hit_test(long long lparam);       // WM_NCHITTEST
 
     void* hwnd_ = nullptr;         // HWND
     void* status_label_ = nullptr; // HWND (static)
@@ -79,6 +83,9 @@ private:
     void* panel_brush_ = nullptr;  // HBRUSH for the text panel
     void* body_font_ = nullptr;    // HFONT (Segoe UI, body)
     void* title_font_ = nullptr;   // HFONT (Segoe UI, status/header)
+    std::string last_display_;     // last text pushed to the edit (change detect)
+    int hot_btn_ = 0;              // hovered title-bar button (1=min, 2=close)
+    int pressed_btn_ = 0;          // pressed title-bar button
     bool dark_ = true;
     bool close_to_tray_ = false;
 

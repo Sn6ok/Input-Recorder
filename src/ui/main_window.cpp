@@ -1,6 +1,7 @@
 #include "ui/main_window.hpp"
 
 #include <Windows.h>
+#include <windowsx.h>
 #include <dwmapi.h>
 
 #include "ui/history_formatting.hpp"
@@ -19,21 +20,29 @@ constexpr int IDC_COPY = 1005;
 constexpr int IDC_HISTORY = 1006;
 constexpr int IDC_SETTINGS = 1007;
 
+constexpr int kTitleH = 40;    // custom title-bar height
+constexpr int kCtlBtnW = 46;   // min/close button width
+constexpr int kResize = 6;     // resize-border thickness
+
 #ifndef DWMWA_USE_IMMERSIVE_DARK_MODE
 constexpr DWORD DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
 #endif
+#ifndef DWMWA_WINDOW_CORNER_PREFERENCE
+constexpr DWORD DWMWA_WINDOW_CORNER_PREFERENCE = 33;
+#endif
 
 // --- Theme palette --------------------------------------------------------
-COLORREF col_window(bool d) { return d ? RGB(30, 30, 30) : RGB(243, 243, 243); }
-COLORREF col_panel(bool d) { return d ? RGB(37, 37, 38) : RGB(255, 255, 255); }
-COLORREF col_text(bool d) { return d ? RGB(235, 235, 235) : RGB(28, 28, 28); }
-COLORREF col_subtext(bool d) { return d ? RGB(155, 155, 155) : RGB(110, 110, 110); }
-COLORREF col_button(bool d) { return d ? RGB(55, 55, 57) : RGB(228, 228, 228); }
-COLORREF col_button_pressed(bool d) { return d ? RGB(75, 75, 78) : RGB(206, 206, 206); }
-constexpr COLORREF kAccent = RGB(0, 120, 215);         // primary button
+COLORREF col_window(bool d) { return d ? RGB(28, 28, 30) : RGB(245, 245, 247); }
+COLORREF col_panel(bool d) { return d ? RGB(38, 38, 42) : RGB(255, 255, 255); }
+COLORREF col_text(bool d) { return d ? RGB(236, 236, 238) : RGB(26, 26, 28); }
+COLORREF col_subtext(bool d) { return d ? RGB(150, 150, 156) : RGB(110, 110, 116); }
+COLORREF col_button(bool d) { return d ? RGB(52, 52, 58) : RGB(230, 230, 233); }
+COLORREF col_button_pressed(bool d) { return d ? RGB(72, 72, 80) : RGB(208, 208, 212); }
+constexpr COLORREF kAccent = RGB(0, 120, 215);
 constexpr COLORREF kAccentPressed = RGB(0, 99, 177);
-constexpr COLORREF kRecording = RGB(226, 74, 74);      // ● RECORDING
-constexpr COLORREF kPaused = RGB(150, 150, 150);       // ○ PAUSED
+constexpr COLORREF kRecording = RGB(230, 76, 76);
+constexpr COLORREF kPaused = RGB(150, 150, 150);
+constexpr COLORREF kCloseHot = RGB(224, 67, 67);
 
 std::wstring to_w(const std::string& utf8) {
     std::u16string u16 = utf8_to_utf16(utf8);
@@ -84,14 +93,24 @@ bool MainWindow::create(void* hinstance, Callbacks callbacks) {
     wc.hInstance = inst;
     wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
     wc.lpszClassName = kClassName;
-    RegisterClassExW(&wc);  // ERROR_CLASS_ALREADY_EXISTS is fine
+    RegisterClassExW(&wc);
 
     const std::wstring title = to_w("Input Recorder");
+    // WS_OVERLAPPEDWINDOW keeps native taskbar/minimize/snap/shadow; the caption
+    // is removed visually in WM_NCCALCSIZE and replaced by a custom title bar.
     HWND hwnd = CreateWindowExW(
         0, kClassName, title.c_str(), WS_OVERLAPPEDWINDOW, CW_USEDEFAULT,
-        CW_USEDEFAULT, 720, 540, nullptr, nullptr, inst, this);
+        CW_USEDEFAULT, 740, 560, nullptr, nullptr, inst, this);
     hwnd_ = hwnd;
-    return hwnd != nullptr;
+    if (hwnd == nullptr) return false;
+
+    // Round the corners on Windows 11.
+    const DWORD round = 2;  // DWMWCP_ROUND
+    DwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, &round, sizeof(round));
+    // Recompute the frame so WM_NCCALCSIZE takes effect.
+    SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
+                 SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER);
+    return true;
 }
 
 void MainWindow::show(int show_command) {
@@ -101,22 +120,108 @@ void MainWindow::show(int show_command) {
     }
 }
 
+int MainWindow::button_at(int x, int y) const {
+    if (y < 0 || y >= kTitleH) return 0;
+    RECT rc;
+    GetClientRect(static_cast<HWND>(hwnd_), &rc);
+    const int w = rc.right;
+    if (x >= w - kCtlBtnW) return 2;               // close
+    if (x >= w - 2 * kCtlBtnW) return 1;           // minimize
+    return 0;
+}
+
+long long MainWindow::hit_test(long long lparam) {
+    HWND hwnd = static_cast<HWND>(hwnd_);
+    POINT pt{GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam)};
+    RECT wr;
+    GetWindowRect(hwnd, &wr);
+    const int x = pt.x - wr.left;
+    const int y = pt.y - wr.top;
+    const int w = wr.right - wr.left;
+    const int h = wr.bottom - wr.top;
+
+    const bool left = x < kResize, right = x >= w - kResize;
+    const bool top = y < kResize, bottom = y >= h - kResize;
+    if (top && left) return HTTOPLEFT;
+    if (top && right) return HTTOPRIGHT;
+    if (bottom && left) return HTBOTTOMLEFT;
+    if (bottom && right) return HTBOTTOMRIGHT;
+    if (left) return HTLEFT;
+    if (right) return HTRIGHT;
+    if (top) return HTTOP;
+    if (bottom) return HTBOTTOM;
+    if (y < kTitleH) {
+        if (button_at(x, y) != 0) return HTCLIENT;  // our buttons
+        return HTCAPTION;                           // draggable strip
+    }
+    return HTCLIENT;
+}
+
 long long MainWindow::handle_message(void* hwnd_v, unsigned msg,
                                      unsigned long long wparam,
                                      long long lparam) {
     HWND hwnd = static_cast<HWND>(hwnd_v);
-    // Keep the member handle valid even during WM_CREATE, which fires *inside*
-    // CreateWindowEx before create() has assigned hwnd_. Without this, on_create
-    // would parent its child controls to a null window and they would all fail
-    // to be created (a blank window).
     hwnd_ = hwnd;
     switch (msg) {
         case WM_CREATE:
             on_create();
             return 0;
+        case WM_NCCALCSIZE:
+            if (wparam != 0) {
+                auto* p = reinterpret_cast<NCCALCSIZE_PARAMS*>(lparam);
+                if (IsZoomed(hwnd)) {
+                    const int fx = GetSystemMetrics(SM_CXFRAME) +
+                                   GetSystemMetrics(SM_CXPADDEDBORDER);
+                    const int fy = GetSystemMetrics(SM_CYFRAME) +
+                                   GetSystemMetrics(SM_CXPADDEDBORDER);
+                    p->rgrc[0].left += fx;
+                    p->rgrc[0].right -= fx;
+                    p->rgrc[0].top += fy;
+                    p->rgrc[0].bottom -= fy;
+                }
+                return 0;  // client spans the whole window (no caption/border)
+            }
+            break;
+        case WM_NCHITTEST:
+            return hit_test(lparam);
+        case WM_PAINT:
+            paint_chrome();
+            return 0;
         case WM_SIZE:
             on_size(LOWORD(lparam), HIWORD(lparam));
+            InvalidateRect(hwnd, nullptr, FALSE);
             return 0;
+        case WM_MOUSEMOVE: {
+            TRACKMOUSEEVENT tme{sizeof(tme), TME_LEAVE, hwnd, 0};
+            TrackMouseEvent(&tme);
+            const int b = button_at(GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam));
+            if (b != hot_btn_) {
+                hot_btn_ = b;
+                RECT tb{0, 0, 0, kTitleH};
+                GetClientRect(hwnd, &tb);
+                tb.bottom = kTitleH;
+                InvalidateRect(hwnd, &tb, FALSE);
+            }
+            return 0;
+        }
+        case WM_MOUSELEAVE:
+            if (hot_btn_ != 0) {
+                hot_btn_ = 0;
+                RECT tb;
+                GetClientRect(hwnd, &tb);
+                tb.bottom = kTitleH;
+                InvalidateRect(hwnd, &tb, FALSE);
+            }
+            return 0;
+        case WM_LBUTTONDOWN:
+            pressed_btn_ = button_at(GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam));
+            return 0;
+        case WM_LBUTTONUP: {
+            const int b = button_at(GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam));
+            if (b != 0 && b == pressed_btn_) title_button_action(b);
+            pressed_btn_ = 0;
+            return 0;
+        }
         case WM_COMMAND:
             on_command(LOWORD(wparam));
             return 0;
@@ -163,20 +268,93 @@ long long MainWindow::handle_message(void* hwnd_v, unsigned msg,
                           static_cast<LPARAM>(lparam));
 }
 
+void MainWindow::title_button_action(int button) {
+    HWND hwnd = static_cast<HWND>(hwnd_);
+    if (button == 1) {
+        ShowWindow(hwnd, SW_MINIMIZE);
+    } else if (button == 2) {
+        SendMessageW(hwnd, WM_CLOSE, 0, 0);
+    }
+}
+
+void MainWindow::paint_chrome() {
+    HWND hwnd = static_cast<HWND>(hwnd_);
+    PAINTSTRUCT ps;
+    HDC dc = BeginPaint(hwnd, &ps);
+
+    RECT rc;
+    GetClientRect(hwnd, &rc);
+    const int w = rc.right;
+
+    // Title-bar background (same as window).
+    RECT tb{0, 0, w, kTitleH};
+    FillRect(dc, &tb, static_cast<HBRUSH>(bg_brush_));
+
+    // App title text.
+    SetBkMode(dc, TRANSPARENT);
+    SetTextColor(dc, col_text(dark_));
+    HGDIOBJ old_font = SelectObject(dc, static_cast<HFONT>(body_font_));
+    RECT tr{14, 0, w - 2 * kCtlBtnW - 8, kTitleH};
+    DrawTextW(dc, L"Input Recorder", -1, &tr,
+              DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+    SelectObject(dc, old_font);
+
+    RECT minr{w - 2 * kCtlBtnW, 0, w - kCtlBtnW, kTitleH};
+    RECT clsr{w - kCtlBtnW, 0, w, kTitleH};
+
+    if (hot_btn_ == 1) {
+        HBRUSH hb = CreateSolidBrush(col_button(dark_));
+        FillRect(dc, &minr, hb);
+        DeleteObject(hb);
+    }
+    if (hot_btn_ == 2) {
+        HBRUSH hb = CreateSolidBrush(kCloseHot);
+        FillRect(dc, &clsr, hb);
+        DeleteObject(hb);
+    }
+
+    // Minimize glyph: a short horizontal line.
+    {
+        HPEN pen = CreatePen(PS_SOLID, 1, col_text(dark_));
+        HGDIOBJ op = SelectObject(dc, pen);
+        const int cx = (minr.left + minr.right) / 2;
+        const int cy = kTitleH / 2;
+        MoveToEx(dc, cx - 6, cy, nullptr);
+        LineTo(dc, cx + 6, cy);
+        SelectObject(dc, op);
+        DeleteObject(pen);
+    }
+    // Close glyph: an X (white when hovered over the red background).
+    {
+        const COLORREF xcol = (hot_btn_ == 2) ? RGB(255, 255, 255) : col_text(dark_);
+        HPEN pen = CreatePen(PS_SOLID, 1, xcol);
+        HGDIOBJ op = SelectObject(dc, pen);
+        const int cx = (clsr.left + clsr.right) / 2;
+        const int cy = kTitleH / 2;
+        MoveToEx(dc, cx - 5, cy - 5, nullptr);
+        LineTo(dc, cx + 6, cy + 6);
+        MoveToEx(dc, cx + 5, cy - 5, nullptr);
+        LineTo(dc, cx - 6, cy + 6);
+        SelectObject(dc, op);
+        DeleteObject(pen);
+    }
+
+    EndPaint(hwnd, &ps);
+}
+
 void MainWindow::on_create() {
     HWND hwnd = static_cast<HWND>(hwnd_);
     HINSTANCE inst =
         reinterpret_cast<HINSTANCE>(GetWindowLongPtrW(hwnd, GWLP_HINSTANCE));
 
     body_font_ = make_font(10, FW_NORMAL);
-    title_font_ = make_font(15, FW_SEMIBOLD);
+    title_font_ = make_font(14, FW_SEMIBOLD);
 
-    auto make = [&](const wchar_t* cls, const wchar_t* text, DWORD style,
-                    int id, HFONT font) -> HWND {
-        HWND h = CreateWindowExW(0, cls, text, WS_CHILD | WS_VISIBLE | style, 0, 0,
-                                 0, 0, hwnd, reinterpret_cast<HMENU>(
-                                                  static_cast<INT_PTR>(id)),
-                                 inst, nullptr);
+    auto make = [&](const wchar_t* cls, const wchar_t* text, DWORD style, int id,
+                    HFONT font) -> HWND {
+        HWND h = CreateWindowExW(
+            0, cls, text, WS_CHILD | WS_VISIBLE | style, 0, 0, 0, 0, hwnd,
+            reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)), inst, nullptr);
         SendMessageW(h, WM_SETFONT, reinterpret_cast<WPARAM>(font), TRUE);
         return h;
     };
@@ -189,7 +367,6 @@ void MainWindow::on_create() {
     text_view_ = make(L"EDIT", L"",
                       ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | WS_VSCROLL,
                       IDC_TEXT, body);
-    // Owner-drawn, flat, themed buttons.
     toggle_btn_ = make(L"BUTTON", L"Pause", BS_OWNERDRAW, IDC_TOGGLE, body);
     copy_btn_ = make(L"BUTTON", L"Copy All", BS_OWNERDRAW, IDC_COPY, body);
     history_btn_ = make(L"BUTTON", L"History", BS_OWNERDRAW, IDC_HISTORY, body);
@@ -206,13 +383,13 @@ void MainWindow::on_create() {
 
 void MainWindow::on_size(int width, int height) {
     const int pad = 18;
-    const int status_h = 30;
+    const int status_h = 28;
     const int note_h = 20;
     const int btn_h = 34;
-    const int btn_w = 116;
+    const int btn_w = 118;
     const int gap = 10;
 
-    int y = pad;
+    int y = kTitleH + 6;  // below the custom title bar
     MoveWindow(static_cast<HWND>(status_label_), pad, y, width - 2 * pad, status_h, TRUE);
     y += status_h + 2;
     MoveWindow(static_cast<HWND>(note_label_), pad, y, width - 2 * pad, note_h, TRUE);
@@ -227,7 +404,6 @@ void MainWindow::on_size(int width, int height) {
     MoveWindow(static_cast<HWND>(copy_btn_), pad + btn_w + gap, by, btn_w, btn_h, TRUE);
     MoveWindow(static_cast<HWND>(history_btn_), pad + 2 * (btn_w + gap), by, btn_w,
                btn_h, TRUE);
-    // Settings is right-aligned.
     MoveWindow(static_cast<HWND>(settings_btn_), width - pad - btn_w, by, btn_w,
                btn_h, TRUE);
 }
@@ -303,10 +479,46 @@ void MainWindow::refresh_status() {
 
 void MainWindow::refresh_text() {
     if (text_view_ == nullptr) return;
-    SetWindowTextW(static_cast<HWND>(text_view_),
-                   to_w(model_.display_text()).c_str());
+    HWND edit = static_cast<HWND>(text_view_);
+
+    // Only replace the text when it actually changed. Rewriting it on every
+    // refresh would reset the scroll position and any selection, making the
+    // view impossible to scroll or copy from.
+    const std::string display = model_.display_text();
+    if (display == last_display_) {
+        SetWindowTextW(static_cast<HWND>(note_label_),
+                       to_w(model_.confidence_note()).c_str());
+        return;
+    }
+
+    // Was the view scrolled to (near) the bottom before the update?
+    const int first_before =
+        static_cast<int>(SendMessageW(edit, EM_GETFIRSTVISIBLELINE, 0, 0));
+    const int line_count =
+        static_cast<int>(SendMessageW(edit, EM_GETLINECOUNT, 0, 0));
+    RECT er;
+    GetClientRect(edit, &er);
+    TEXTMETRICW tm{};
+    HDC edc = GetDC(edit);
+    HGDIOBJ of = SelectObject(edc, static_cast<HFONT>(body_font_));
+    GetTextMetricsW(edc, &tm);
+    SelectObject(edc, of);
+    ReleaseDC(edit, edc);
+    const int visible_lines = tm.tmHeight > 0 ? er.bottom / tm.tmHeight : 1;
+    const bool at_bottom = (first_before + visible_lines) >= (line_count - 1);
+
+    last_display_ = display;
+    SetWindowTextW(edit, to_w(display).c_str());
     SetWindowTextW(static_cast<HWND>(note_label_),
                    to_w(model_.confidence_note()).c_str());
+
+    if (at_bottom) {
+        // Keep newest text visible while actively recording.
+        const int lines = static_cast<int>(SendMessageW(edit, EM_GETLINECOUNT, 0, 0));
+        SendMessageW(edit, EM_LINESCROLL, 0, lines);
+    } else {
+        SendMessageW(edit, EM_LINESCROLL, 0, first_before);
+    }
 }
 
 void MainWindow::do_copy_all() {
