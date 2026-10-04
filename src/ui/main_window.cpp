@@ -170,13 +170,21 @@ void MainWindow::show(int show_command) {
     }
 }
 
+int MainWindow::sidebar_w() const { return compact_ ? 0 : kSidebarW; }
+
 int MainWindow::button_at(int x, int y) const {
-    if (y < 0 || y >= kTitleH) return 0;
     RECT rc;
     GetClientRect(static_cast<HWND>(hwnd_), &rc);
     const int w = rc.right;
-    if (x >= w - kCtlBtnW) return 2;
-    if (x >= w - 2 * kCtlBtnW) return 1;
+    if (compact_) {
+        // Expand button (top-right of the widget).
+        if (x >= w - 40 && x <= w - 8 && y >= 6 && y <= 36) return 4;
+        return 0;
+    }
+    if (y < 0 || y >= kTitleH) return 0;
+    if (x >= w - kCtlBtnW) return 2;        // close
+    if (x >= w - 2 * kCtlBtnW) return 1;    // minimize
+    if (x >= w - 3 * kCtlBtnW) return 3;    // compact toggle
     return 0;
 }
 
@@ -197,11 +205,15 @@ long long MainWindow::hit_test(long long lparam) {
     if (right) return HTRIGHT;
     if (top) return HTTOP;
     if (bottom) return HTBOTTOM;
-    if (y < kTitleH && x >= kSidebarW) {
+    if (compact_) {
+        if (button_at(x, y) == 4) return HTCLIENT;  // expand button
+        return HTCAPTION;                           // drag the widget
+    }
+    if (y < kTitleH && x >= sidebar_w()) {
         if (button_at(x, y) != 0) return HTCLIENT;
         return HTCAPTION;
     }
-    if (x < kSidebarW) return HTCAPTION;
+    if (x < sidebar_w()) return HTCAPTION;
     return HTCLIENT;
 }
 
@@ -314,6 +326,25 @@ void MainWindow::title_button_action(int button) {
     HWND hwnd = static_cast<HWND>(hwnd_);
     if (button == 1) ShowWindow(hwnd, SW_MINIMIZE);
     else if (button == 2) SendMessageW(hwnd, WM_CLOSE, 0, 0);
+    else if (button == 3 || button == 4) toggle_compact();
+}
+
+void MainWindow::toggle_compact() {
+    HWND hwnd = static_cast<HWND>(hwnd_);
+    compact_ = !compact_;
+    if (compact_) {
+        view_ = kViewLive;
+        // A tiny always-on-top widget docked to the bottom-left of the work area
+        // (left edge, just above the taskbar).
+        RECT wa{};
+        SystemParametersInfoW(SPI_GETWORKAREA, 0, &wa, 0);
+        const int cw = 250, ch = 116;
+        SetWindowPos(hwnd, HWND_TOPMOST, wa.left + 12, wa.bottom - ch - 12, cw, ch,
+                     SWP_SHOWWINDOW);
+    } else {
+        SetWindowPos(hwnd, HWND_NOTOPMOST, 120, 90, 780, 580, SWP_SHOWWINDOW);
+    }
+    activate_view(view_);
 }
 
 void MainWindow::paint_chrome() {
@@ -324,49 +355,124 @@ void MainWindow::paint_chrome() {
     GetClientRect(hwnd, &rc);
     const int w = rc.right, h = rc.bottom;
 
-    RECT tbar{kSidebarW, 0, w, kTitleH};
+    if (compact_) {
+        RECT full{0, 0, w, h};
+        FillRect(dc, &full, static_cast<HBRUSH>(bg_brush_));
+        SetBkMode(dc, TRANSPARENT);
+        const bool rec = is_recording(model_.status());
+
+        HBRUSH dotb = CreateSolidBrush(rec ? kAccentBright : kPaused);
+        HGDIOBJ odb = SelectObject(dc, dotb);
+        HGDIOBJ odp = SelectObject(dc, GetStockObject(NULL_PEN));
+        Ellipse(dc, 14, 16, 24, 26);
+        SelectObject(dc, odb);
+        SelectObject(dc, odp);
+        DeleteObject(dotb);
+
+        SetTextColor(dc, rec ? kAccentBright : kPaused);
+        HGDIOBJ of = SelectObject(dc, static_cast<HFONT>(title_font_));
+        RECT sr{32, 10, w - 46, 34};
+        DrawTextW(dc, rec ? L"Recording" : L"Paused", -1, &sr,
+                  DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+        SelectObject(dc, of);
+
+        // Expand button (top-right): a square-with-arrow glyph.
+        RECT er{w - 40, 6, w - 8, 36};
+        if (hot_btn_ == 4) fill_round(dc, er, kBtn, 6);
+        HPEN pen = CreatePen(PS_SOLID, 1, kText);
+        HGDIOBJ op = SelectObject(dc, pen);
+        HGDIOBJ ob = SelectObject(dc, GetStockObject(HOLLOW_BRUSH));
+        const int ex = (er.left + er.right) / 2, ey = (er.top + er.bottom) / 2;
+        Rectangle(dc, ex - 6, ey - 5, ex + 6, ey + 6);
+        SelectObject(dc, ob);
+        SelectObject(dc, op);
+        DeleteObject(pen);
+
+        HPEN dpen = CreatePen(PS_SOLID, 1, RGB(40, 44, 52));
+        HGDIOBJ dop = SelectObject(dc, dpen);
+        MoveToEx(dc, 14, 44, nullptr);
+        LineTo(dc, w - 14, 44);
+        SelectObject(dc, dop);
+        DeleteObject(dpen);
+
+        SetTextColor(dc, kSubtext);
+        of = SelectObject(dc, static_cast<HFONT>(body_font_));
+        RECT ll{14, 52, w - 14, 70};
+        DrawTextW(dc, L"Last input", -1, &ll, DT_LEFT | DT_SINGLELINE);
+        SelectObject(dc, of);
+
+        // Last input = last non-empty line of the annotated view.
+        std::string disp = model_.display_text();
+        std::string last;
+        if (disp.rfind("No text", 0) != 0) {
+            const size_t end = disp.find_last_not_of("\r\n");
+            if (end != std::string::npos) {
+                size_t start = disp.find_last_of('\n', end);
+                start = (start == std::string::npos) ? 0 : start + 1;
+                last = disp.substr(start, end - start + 1);
+                if (!last.empty() && last.back() == '\r') last.pop_back();
+            }
+        }
+        if (last.empty()) last = "\xE2\x80\x94";  // em dash
+        SetTextColor(dc, kText);
+        of = SelectObject(dc, static_cast<HFONT>(title_font_));
+        const std::wstring lw = to_w(last);
+        RECT lv{14, 72, w - 14, h - 8};
+        DrawTextW(dc, lw.c_str(), -1, &lv,
+                  DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+        SelectObject(dc, of);
+
+        EndPaint(hwnd, &ps);
+        return;
+    }
+
+    const int sw = sidebar_w();
+    RECT tbar{sw, 0, w, kTitleH};
     FillRect(dc, &tbar, static_cast<HBRUSH>(bg_brush_));
-    RECT rail{0, 0, kSidebarW, h};
-    FillRect(dc, &rail, static_cast<HBRUSH>(sidebar_brush_));
+    if (!compact_) {
+        RECT rail{0, 0, kSidebarW, h};
+        FillRect(dc, &rail, static_cast<HBRUSH>(sidebar_brush_));
+    }
 
     SetBkMode(dc, TRANSPARENT);
-    const wchar_t* title = view_ == kViewHistory ? L"History"
-                           : view_ == kViewSettings ? L"Settings"
-                                                    : L"Live";
+    // App name (left).
     SetTextColor(dc, kText);
     HGDIOBJ of = SelectObject(dc, static_cast<HFONT>(title_font_));
-    RECT lr{kSidebarW + 16, 0, kSidebarW + 108, kTitleH};
-    DrawTextW(dc, title, -1, &lr, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+    RECT lr{sw + 16, 0, sw + 240, kTitleH};
+    DrawTextW(dc, L"Input Recorder", -1, &lr, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
     SelectObject(dc, of);
 
-    // Recording pill (always shown — recording runs regardless of view).
+    // Recording status (right, before the window buttons): a colored dot + text.
     const bool rec = is_recording(model_.status());
-    const wchar_t* pill_text = rec ? L"REC" : L"PAUSED";
+    const wchar_t* st = rec ? L"RECORDING" : L"PAUSED";
     of = SelectObject(dc, static_cast<HFONT>(body_font_));
     SIZE ts{};
-    GetTextExtentPoint32W(dc, pill_text, lstrlenW(pill_text), &ts);
-    SelectObject(dc, of);
-    const int py = (kTitleH - 22) / 2;
-    const int pill_x = kSidebarW + 112;
-    const int text_off = 12 + 8 + 7;
-    RECT pill{pill_x, py, pill_x + text_off + ts.cx + 12, py + 22};
-    fill_round(dc, pill, rec ? kAccentBg : kBtn, 11);
+    GetTextExtentPoint32W(dc, st, lstrlenW(st), &ts);
+    const int cy = kTitleH / 2;
+    const int status_right = w - 3 * kCtlBtnW - 14;
+    const int tx = status_right - ts.cx;
     HBRUSH dotb = CreateSolidBrush(rec ? kAccentBright : kPaused);
     HGDIOBJ odb = SelectObject(dc, dotb);
     HGDIOBJ odp = SelectObject(dc, GetStockObject(NULL_PEN));
-    const int dcy = py + 11;
-    Ellipse(dc, pill.left + 12, dcy - 4, pill.left + 20, dcy + 4);
+    const int dot_x = tx - 15;
+    Ellipse(dc, dot_x, cy - 4, dot_x + 8, cy + 4);
     SelectObject(dc, odb);
     SelectObject(dc, odp);
     DeleteObject(dotb);
     SetTextColor(dc, rec ? kAccentBright : kPaused);
-    of = SelectObject(dc, static_cast<HFONT>(body_font_));
-    RECT ptr{pill.left + text_off, pill.top, pill.right, pill.bottom};
-    DrawTextW(dc, pill_text, -1, &ptr, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+    RECT sr{tx, 0, status_right, kTitleH};
+    DrawTextW(dc, st, -1, &sr, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
     SelectObject(dc, of);
 
+    // Window buttons: compact toggle, minimize, close.
+    RECT cmpr{w - 3 * kCtlBtnW, 0, w - 2 * kCtlBtnW, kTitleH};
     RECT minr{w - 2 * kCtlBtnW, 0, w - kCtlBtnW, kTitleH};
     RECT clsr{w - kCtlBtnW, 0, w, kTitleH};
+    if (hot_btn_ == 3) {
+        HBRUSH hb = CreateSolidBrush(kBtn);
+        FillRect(dc, &cmpr, hb);
+        DeleteObject(hb);
+    }
     if (hot_btn_ == 1) {
         HBRUSH hb = CreateSolidBrush(kBtn);
         FillRect(dc, &minr, hb);
@@ -380,17 +486,24 @@ void MainWindow::paint_chrome() {
     {
         HPEN pen = CreatePen(PS_SOLID, 1, kText);
         HGDIOBJ op = SelectObject(dc, pen);
-        int cx = (minr.left + minr.right) / 2, cy = kTitleH / 2;
-        MoveToEx(dc, cx - 6, cy, nullptr);
-        LineTo(dc, cx + 6, cy);
+        HGDIOBJ ob = SelectObject(dc, GetStockObject(HOLLOW_BRUSH));
+        // compact toggle: a small window rectangle.
+        const int ccx = (cmpr.left + cmpr.right) / 2;
+        Rectangle(dc, ccx - 6, cy - 4, ccx + 6, cy + 5);
+        SelectObject(dc, ob);
+        // minimize: a line.
+        const int mcx = (minr.left + minr.right) / 2;
+        MoveToEx(dc, mcx - 6, cy, nullptr);
+        LineTo(dc, mcx + 6, cy);
+        // close: an X.
         const COLORREF xcol = (hot_btn_ == 2) ? RGB(255, 255, 255) : kText;
         HPEN pen2 = CreatePen(PS_SOLID, 1, xcol);
         SelectObject(dc, pen2);
-        cx = (clsr.left + clsr.right) / 2;
-        MoveToEx(dc, cx - 5, cy - 5, nullptr);
-        LineTo(dc, cx + 6, cy + 6);
-        MoveToEx(dc, cx + 5, cy - 5, nullptr);
-        LineTo(dc, cx - 6, cy + 6);
+        const int xcx = (clsr.left + clsr.right) / 2;
+        MoveToEx(dc, xcx - 5, cy - 5, nullptr);
+        LineTo(dc, xcx + 6, cy + 6);
+        MoveToEx(dc, xcx + 5, cy - 5, nullptr);
+        LineTo(dc, xcx - 6, cy + 6);
         SelectObject(dc, op);
         DeleteObject(pen);
         DeleteObject(pen2);
@@ -504,6 +617,8 @@ void MainWindow::on_create() {
 
 void MainWindow::layout_content(int width, int height) {
     HWND hwnd = static_cast<HWND>(hwnd_);
+    if (compact_) return;  // the compact widget has no child controls to lay out
+
     const int navx = (kSidebarW - kNavSize) / 2;
     MoveWindow(static_cast<HWND>(nav_live_), navx, kTitleH + 8, kNavSize, kNavSize, TRUE);
     MoveWindow(static_cast<HWND>(nav_history_), navx, kTitleH + 8 + kNavSize + 8,
@@ -554,10 +669,29 @@ void MainWindow::on_size(int width, int height) { layout_content(width, height);
 void MainWindow::activate_view(int view) {
     view_ = view;
     HWND hwnd = static_cast<HWND>(hwnd_);
-
     auto show = [](void* c, bool s) {
         if (c) ShowWindow(static_cast<HWND>(c), s ? SW_SHOW : SW_HIDE);
     };
+
+    if (compact_) {
+        // Compact widget is fully custom-painted — hide every child control.
+        show(text_view_, false);
+        show(note_label_, false);
+        show(toggle_btn_, false);
+        show(copy_btn_, false);
+        show(search_edit_, false);
+        show(list_box_, false);
+        for (void* c : settings_ctrls_) show(c, false);
+        show(nav_live_, false);
+        show(nav_history_, false);
+        show(nav_settings_, false);
+        InvalidateRect(hwnd, nullptr, TRUE);
+        return;
+    }
+
+    show(nav_live_, true);
+    show(nav_history_, true);
+    show(nav_settings_, true);
     const bool live = view == kViewLive, hist = view == kViewHistory,
                set = view == kViewSettings;
     show(note_label_, live);
@@ -567,10 +701,8 @@ void MainWindow::activate_view(int view) {
     show(search_edit_, hist);
     show(list_box_, hist);
     for (void* c : settings_ctrls_) show(c, set);
-
     if (hist) refresh_history();
     if (set) load_settings_controls();
-
     InvalidateRect(hwnd, nullptr, TRUE);
 }
 
@@ -731,6 +863,12 @@ void MainWindow::refresh_text() {
 
     const std::string display = model_.display_text();
     if (display == last_display_) return;
+
+    if (compact_) {
+        last_display_ = display;
+        InvalidateRect(static_cast<HWND>(hwnd_), nullptr, FALSE);  // repaint widget
+        return;
+    }
 
     const int first_before =
         static_cast<int>(SendMessageW(edit, EM_GETFIRSTVISIBLELINE, 0, 0));

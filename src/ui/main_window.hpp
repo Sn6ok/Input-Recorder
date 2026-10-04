@@ -80,6 +80,8 @@ private:
     void load_settings_controls();
     Configuration read_settings_controls() const;
     void layout_content(int width, int height);
+    int sidebar_w() const;   // 0 in compact mode, kSidebarW otherwise
+    void toggle_compact();   // compact mode: just the recovered text
 
     void* hwnd_ = nullptr;
     // Live view
@@ -105,6 +107,7 @@ private:
     void* glyph_font_ = nullptr;
 
     int view_ = kViewLive;
+    bool compact_ = false;
     std::string last_display_;
     int hot_btn_ = 0;
     int pressed_btn_ = 0;
