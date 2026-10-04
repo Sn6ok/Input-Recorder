@@ -1,14 +1,13 @@
 #pragma once
 
-// The main application window (spec §566-§575): a visible recording indicator
-// (● RECORDING / ○ PAUSED), a read-only multi-line view of the reconstructed
-// text, a confidence note, and Pause/Resume, Copy All and History buttons.
-// Supports a dark or light palette (finalised in Phase 11).
+// The main application window — "Studio" layout (spec §226-§301): a custom
+// frameless dark window with a left navigation rail (Live / History / Settings),
+// a title bar with a recording pill and window controls, a read-only view of the
+// reconstructed text with inline key/shortcut markers, and Pause + Copy All.
 //
-// All display strings/state come from the OS-free AppViewModel and
-// history_formatting, so this file is a thin Win32 shell (header avoids
-// <Windows.h>). Updates from the app (set_status/set_reconstruction) must be
-// made on the UI thread; the app marshals to it with PostMessage.
+// All display strings/state come from the OS-free AppViewModel; this file is a
+// thin Win32 shell (header avoids <Windows.h>). App -> UI updates
+// (set_status/set_reconstruction) must run on the UI thread.
 
 #include <functional>
 #include <string>
@@ -33,27 +32,20 @@ public:
     MainWindow(const MainWindow&) = delete;
     MainWindow& operator=(const MainWindow&) = delete;
 
-    // Registers the class (once) and creates the window. `hinstance` is an
-    // HINSTANCE. Returns false on failure.
     bool create(void* hinstance, Callbacks callbacks);
     void show(int show_command);
     void* handle() const { return hwnd_; }
 
-    // App -> UI updates (call on the UI thread).
     void set_status(RecordingStatus status);
     void set_reconstruction(const std::string& text, const std::string& annotated,
                             Confidence confidence);
     void set_dark_theme(bool dark);
-    // When true, closing the window hides it to the tray instead of quitting.
     void set_close_to_tray(bool value) { close_to_tray_ = value; }
 
     const AppViewModel& model() const { return model_; }
 
-    // Runs a standard message loop until the window closes. Convenience for a
-    // UI-only launch; the full app owns its own loop.
     int run_message_loop();
 
-    // Internal: window procedure dispatch (used by the file-scope WndProc).
     long long handle_message(void* hwnd, unsigned msg, unsigned long long wparam,
                              long long lparam);
 
@@ -66,26 +58,30 @@ private:
     void do_copy_all();
     void apply_theme();
     void draw_button(void* draw_item_struct);  // WM_DRAWITEM owner-draw
-    void paint_chrome();                        // custom title bar (WM_PAINT)
+    void paint_chrome();                        // title bar + sidebar (WM_PAINT)
     int button_at(int x, int y) const;          // 1=min, 2=close, 0=none
     void title_button_action(int button);
     long long hit_test(long long lparam);       // WM_NCHITTEST
 
-    void* hwnd_ = nullptr;         // HWND
-    void* status_label_ = nullptr; // HWND (static)
-    void* note_label_ = nullptr;   // HWND (static)
-    void* text_view_ = nullptr;    // HWND (read-only edit)
-    void* toggle_btn_ = nullptr;   // HWND
-    void* copy_btn_ = nullptr;     // HWND
-    void* history_btn_ = nullptr;  // HWND
-    void* settings_btn_ = nullptr; // HWND
-    void* bg_brush_ = nullptr;     // HBRUSH for the window background
-    void* panel_brush_ = nullptr;  // HBRUSH for the text panel
-    void* body_font_ = nullptr;    // HFONT (Segoe UI, body)
-    void* title_font_ = nullptr;   // HFONT (Segoe UI, status/header)
-    std::string last_display_;     // last text pushed to the edit (change detect)
-    int hot_btn_ = 0;              // hovered title-bar button (1=min, 2=close)
-    int pressed_btn_ = 0;          // pressed title-bar button
+    void* hwnd_ = nullptr;
+    void* note_label_ = nullptr;    // confidence note (static)
+    void* text_view_ = nullptr;     // read-only edit
+    void* toggle_btn_ = nullptr;    // Pause / Resume
+    void* copy_btn_ = nullptr;      // Copy All
+    void* nav_live_ = nullptr;      // sidebar: Live (active)
+    void* nav_history_ = nullptr;   // sidebar: History
+    void* nav_settings_ = nullptr;  // sidebar: Settings
+
+    void* bg_brush_ = nullptr;       // main area background
+    void* sidebar_brush_ = nullptr;  // navigation rail background
+    void* panel_brush_ = nullptr;    // text panel background
+    void* body_font_ = nullptr;      // Segoe UI body
+    void* title_font_ = nullptr;     // Segoe UI title / pill
+    void* glyph_font_ = nullptr;     // Segoe UI Symbol for nav glyphs
+
+    std::string last_display_;
+    int hot_btn_ = 0;
+    int pressed_btn_ = 0;
     bool dark_ = true;
     bool close_to_tray_ = false;
 
