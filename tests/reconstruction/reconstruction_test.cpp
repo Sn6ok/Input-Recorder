@@ -269,6 +269,15 @@ TEST_CASE("recon.annotated", "backspace trims typed text in the annotated view")
     CHECK_EQ(h.engine.annotated_text(), std::string("hell"));
 }
 
+TEST_CASE("recon.annotated", "backspace over a multi-byte char keeps valid UTF-8") {
+    Harness h;
+    h.type("\xD0\xB0\xD0\xB1");  // "аб" — two 2-byte Cyrillic letters
+    h.key(kBack);               // delete "б"
+    const std::string ann = h.engine.annotated_text();
+    CHECK_EQ(ann, std::string("\xD0\xB0"));                 // "а", intact
+    CHECK(ann.find("\xEF\xBF\xBD") == std::string::npos);  // no U+FFFD square
+}
+
 // ---- snapshot / restore (point-in-time, §211) ----------------------------
 TEST_CASE("recon.snapshot", "snapshot and restore round-trips state") {
     Harness h;

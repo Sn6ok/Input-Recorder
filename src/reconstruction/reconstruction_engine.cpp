@@ -275,14 +275,18 @@ void ReconstructionEngine::append_marker(const std::string& label) {
 
 void ReconstructionEngine::annotated_backspace() {
     if (annotated_.empty()) return;
-    const char last = annotated_.back();
-    if (last == '\n' || last == ')') return;  // don't corrupt a marker
-    annotated_.pop_back();
-    // Remove the rest of a multi-byte UTF-8 code point.
+    if (annotated_.back() == '\n' || annotated_.back() == ')') {
+        return;  // at a marker boundary; leave it intact
+    }
+    // Remove one whole UTF-8 code point: strip trailing continuation bytes
+    // (10xxxxxx) first, then the leading byte. Popping the last byte first would
+    // leave a dangling lead byte for multi-byte characters (e.g. Cyrillic),
+    // which renders as U+FFFD "replacement" squares.
     while (!annotated_.empty() &&
            (static_cast<unsigned char>(annotated_.back()) & 0xC0) == 0x80) {
         annotated_.pop_back();
     }
+    if (!annotated_.empty()) annotated_.pop_back();
 }
 
 void ReconstructionEngine::annotate(const Event& event) {

@@ -234,6 +234,14 @@ void Application::refresh_ui() {
 }
 
 void Application::open_history() {
+    // Only one History window at a time: if it is already open, surface it.
+    if (history_window_ &&
+        IsWindow(static_cast<HWND>(history_window_->handle()))) {
+        HWND h = static_cast<HWND>(history_window_->handle());
+        ShowWindow(h, SW_SHOW);
+        SetForegroundWindow(h);
+        return;
+    }
     history_window_ = std::make_unique<HistoryWindow>();
     auto source = [this](const std::string& query) -> std::vector<std::string> {
         std::vector<std::string> rows;
@@ -256,6 +264,14 @@ void Application::open_history() {
 }
 
 void Application::open_settings() {
+    // Only one Settings window at a time: if it is already open, surface it.
+    if (settings_window_ &&
+        IsWindow(static_cast<HWND>(settings_window_->handle()))) {
+        HWND h = static_cast<HWND>(settings_window_->handle());
+        ShowWindow(h, SW_SHOW);
+        SetForegroundWindow(h);
+        return;
+    }
     settings_window_ = std::make_unique<SettingsWindow>();
     if (settings_window_->create(hinstance_, window_.handle(), settings_->config(),
                                  [this](const Configuration& c) {

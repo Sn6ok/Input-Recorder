@@ -100,6 +100,9 @@ long long SettingsWindow::handle_message(void* hwnd_v, unsigned msg,
                                          unsigned long long wparam,
                                          long long lparam) {
     HWND hwnd = static_cast<HWND>(hwnd_v);
+    // WM_CREATE fires inside CreateWindowEx before create() assigns hwnd_; keep
+    // it valid so on_create parents its controls correctly (else a blank window).
+    hwnd_ = hwnd;
     switch (msg) {
         case WM_CREATE:
             on_create();
