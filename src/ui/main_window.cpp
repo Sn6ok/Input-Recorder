@@ -295,6 +295,11 @@ void MainWindow::paint_chrome() {
     const int w = rc.right;
     const int h = rc.bottom;
 
+    // Title-bar background (clears any previous pill/text so a shorter label
+    // like REC does not leave leftovers from a wider one like PAUSED).
+    RECT tbar{kSidebarW, 0, w, kTitleH};
+    FillRect(dc, &tbar, static_cast<HBRUSH>(bg_brush_));
+
     // Navigation rail background.
     RECT rail{0, 0, kSidebarW, h};
     FillRect(dc, &rail, static_cast<HBRUSH>(sidebar_brush_));
